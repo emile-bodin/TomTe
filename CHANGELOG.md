@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **Fix: Music Assistant speakers are named after their device.** They took the name of their room, so four speakers in the living room all read "Huiskamer" on the Muziek page, in the speaker popup and in the announcement settings. They now show the device's name (the one you gave it in Home Assistant, else its own).
+
 ## 1.4.0 · 2026-10-30
 
 - **New: Music Assistant.** Speakers that Music Assistant runs were plain media players in Tomte (play, pause, volume). Their popup now has four tabs: favourites (tap to play), search, the queue (now and next) and moving the music to another speaker. A new **Muziek** page under Meer has the same for all speakers on one screen, plus what plays where; it only shows when Music Assistant is installed. Everything goes through Home Assistant's own `music_assistant` services. An administrator's panel stores the integration's id in the household settings, so search and favourites also work for other users.

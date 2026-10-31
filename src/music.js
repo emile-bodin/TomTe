@@ -9,8 +9,8 @@ import { ico } from "./cards.js";
 /** a media player that Music Assistant runs (MA sets mass_player_type on its own players) */
 export const isMA = (hass, id) => hass.states[id]?.attributes?.mass_player_type != null || hass.entities?.[id]?.platform === "music_assistant";
 export const maPlayers = hass => Object.values(hass.states).filter(s => domain(s.entity_id) === "media_player" && isMA(hass, s.entity_id));
-/** a speaker by its room when it has one ("Kantoor"), else its own name */
-export const playerName = (hass, s) => { const e = hass.entities?.[s.entity_id], aid = e?.area_id || hass.devices?.[e?.device_id]?.area_id, a = aid && hass.areas?.[aid]?.name; return a ? a.charAt(0).toUpperCase() + a.slice(1) : s.attributes.friendly_name || s.entity_id; };
+/** a speaker by the name of its device ("Sonos", "Hub"), else its own name: the room is no good, several speakers can share one */
+export const playerName = (hass, s) => { const d = hass.devices?.[hass.entities?.[s.entity_id]?.device_id], n = d?.name_by_user || d?.name || s.attributes.friendly_name || s.entity_id; return n.charAt(0).toUpperCase() + n.slice(1); };
 
 /** the MA config entry, needed by search and get_library. Listing config entries can need an admin, so an admin's panel stores the id
     in the household settings (music.entry) and everyone else reads it from there. */
