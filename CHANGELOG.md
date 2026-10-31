@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **New: a player bar on the Muziek page, and a calmer layout.** The page could pick music for a speaker but not steer it, and its blocks had no order. A slim bar at the top of the left column now steers the chosen speaker (artwork, title, previous / play-pause / next, volume), with small round buttons in the style of the page's filter pills; on a phone it takes two rows. The pills show which speakers play (pulsing dot) or are paused (ring), playing ones first. The page picks the speaker that started playing last, and keeps the one you tap, so it does not jump while you choose music. Under the bar the library (one search field over the favourites, the hits while you search) fills the wide left column, the queue and moving the music sit in a narrow column on the right; the separate "Speelt nu" block is gone, the pills say it.
+
 - **Fix: Music Assistant speakers are named after their device.** They took the name of their room, so four speakers in the living room all read "Huiskamer" on the Muziek page, in the speaker popup and in the announcement settings. They now show the device's name (the one you gave it in Home Assistant, else its own).
 
 ## 1.4.0 · 2026-10-30

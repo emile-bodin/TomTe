@@ -4,7 +4,7 @@ import { html, nothing } from "lit";
 import { classMap } from "lit/directives/class-map.js";
 import { t } from "./i18n.js";
 import { domain, unavailable } from "./util.js";
-import { ico } from "./cards.js";
+import { ico, artUrl } from "./cards.js";
 
 /** a media player that Music Assistant runs (MA sets mass_player_type on its own players) */
 export const isMA = (hass, id) => hass.states[id]?.attributes?.mass_player_type != null || hass.entities?.[id]?.platform === "music_assistant";
@@ -99,6 +99,41 @@ export function queueList(p, id) {
     ${q.items ? note(t("{n} nummers in de wachtrij", { n: q.items })) : nothing}`;
 }
 
+/** a slim player bar for speaker `id`: artwork, title, previous / play-pause / next and the volume; one row on a wide screen */
+export function playerBar(p, id) {
+  const s = p.hass.states[id]; if (!s) return nothing;
+  const a = s.attributes, pic = artUrl(a), on = s.state === "playing", vol = Math.round((a.volume_level ?? 0) * 100);
+  const call = (svc, data = {}) => p.call("media_player", svc, { entity_id: id, ...data }).catch(() => {});
+  const setVol = v => call("volume_set", { volume_level: Math.max(0, Math.min(100, v)) / 100 });
+  const other = a.source && a.source !== "Music Assistant Queue" ? a.source : null;   // a Sonos playing the TV, say
+  const what = a.media_title || (on ? other || t("Speelt") : t("Er speelt niets"));
+  return html`<div class=${classMap({ mbar: true, on })}>
+    <span class="ma">${ico("mdi:music")}${pic ? html`<img src=${pic} alt="" @error=${e => e.target.remove()}>` : nothing}</span>
+    <div class="nm">${what}<small>${[playerName(p.hass, s), a.media_artist].filter(Boolean).join(" · ")}</small></div>
+    <div class="mbtns">
+      <button title=${t("Vorige")} @click=${() => call("media_previous_track")}><ha-icon icon="mdi:skip-previous"></ha-icon></button>
+      <button class="main" title=${on ? t("Pauze") : t("Speel")} @click=${() => call("media_play_pause")}><ha-icon icon=${on ? "mdi:pause" : "mdi:play"}></ha-icon></button>
+      <button title=${t("Volgende")} @click=${() => call("media_next_track")}><ha-icon icon="mdi:skip-next"></ha-icon></button>
+    </div>
+    ${a.volume_level != null ? html`<div class="mvol">
+      <button title=${t("Zachter")} @click=${() => setVol(vol - 5)}><ha-icon icon="mdi:volume-minus"></ha-icon></button>
+      <input type="range" min="0" max="100" .value=${String(vol)} @change=${e => setVol(+e.target.value)} aria-label=${t("Volume")}>
+      <button title=${t("Harder")} @click=${() => setVol(vol + 5)}><ha-icon icon="mdi:volume-plus"></ha-icon></button><b>${vol}%</b>
+    </div>` : nothing}
+  </div>`;
+}
+
+/** the Muziek page's library: one search field, the hits while there is a query, else the favourites */
+export const library = (p, id) => html`${searchBox(p, id)}${(p.musicQuery || "").trim().length >= 2 ? nothing : favTiles(p, id)}`;
+
+/** speakers in the order a person looks for them: playing, then paused, then the rest, each by name */
+const rank = s => s.state === "playing" ? 0 : s.state === "paused" ? 1 : 2;
+export const speakerList = hass => maPlayers(hass).filter(s => !unavailable(s) && s.attributes.mass_player_type === "player")
+  .sort((a, b) => rank(a) - rank(b) || playerName(hass, a).localeCompare(playerName(hass, b)));
+/** the speaker the page steers: the one picked by hand while it is still there, else the speaker that started playing last, else the first */
+export const pickSpeaker = (list, picked) => list.find(s => s.entity_id === picked)
+  || list.filter(s => rank(s) < 2).sort((a, b) => rank(a) - rank(b) || Date.parse(b.last_changed) - Date.parse(a.last_changed))[0] || list[0] || null;
+
 /** the other speakers as pills; a tap moves what plays on `id` there */
 export function movePills(p, id) {
   const s = p.hass.states[id], others = maPlayers(p.hass).filter(x => x.entity_id !== id && !unavailable(x) && x.attributes.mass_player_type === "player");
@@ -129,6 +164,35 @@ export const musicStyles = `
   .mpills button.on{background:rgba(255,255,255,.18)}
   .mpills img.ico,.mpills ha-icon{width:17px;height:17px;--mdc-icon-size:17px}
   .mnote{margin-top:12px;font-size:13px;color:var(--fg-3)}
+  /* the slim player bar of the Muziek page: one row at the top of the left column on a wide screen; two rows on a phone (title + play, then the volume) */
+  .mbar{display:grid;grid-template-columns:40px minmax(0,1fr) auto minmax(150px,210px);align-items:center;gap:14px;padding:8px 16px 8px 8px;border-radius:var(--r);background:rgba(255,255,255,.08);border:1px solid var(--line);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2)}
+  .mbar .ma{width:40px;border-radius:8px} .mbar .ma img.ico,.mbar .ma ha-icon{width:18px;height:18px;--mdc-icon-size:18px}
+  .mbar .nm{min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mbar .nm small{display:block;margin-top:1px;font-size:11px;font-weight:500;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* buttons in the page style: the round glass pills of the filter bars (.ppills), only smaller; play is the white one */
+  .mbtns{display:flex;align-items:center;gap:6px}
+  .mbtns button{display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.08);color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s;--mdc-icon-size:18px}
+  .mbtns button:hover{background:rgba(255,255,255,.18)}
+  .mbtns button.main{width:44px;background:rgba(255,255,255,.9);color:#1d1d1f;border-color:transparent}
+  .mvol{display:flex;align-items:center;gap:4px;min-width:0}
+  .mvol button{display:grid;place-items:center;width:26px;height:26px;padding:0;border:0;background:none;color:var(--fg-2);cursor:pointer;flex:none;--mdc-icon-size:16px}
+  .mvol input{flex:1;min-width:0;margin:0 4px;height:4px} .mvol input::-webkit-slider-thumb{width:14px;height:14px} .mvol input::-moz-range-thumb{width:14px;height:14px}
+  .mvol b{min-width:34px;text-align:right;font-size:11px;font-weight:600;color:var(--fg-3)}
+  @media (max-width:900px){
+    .mbar{grid-template-columns:40px minmax(0,1fr) auto;gap:12px;padding:8px 12px 8px 8px}
+    .mbar .mbtns button:not(.main){display:none}
+    .mbar .mvol{grid-column:1/-1}
+  }
+  /* speaker pills: a dot for what plays (pulsing) or is paused */
+  .ppills.mspk button i{width:7px;height:7px;border-radius:50%;flex:none}
+  .ppills.mspk button.playing i{background:#7ee08a;box-shadow:0 0 0 0 rgba(126,224,138,.6);animation:mpulse 2s infinite}
+  .ppills.mspk button.paused i{border:1.5px solid var(--fg-2)}
+  @keyframes mpulse{70%{box-shadow:0 0 0 6px rgba(126,224,138,0)}100%{box-shadow:0 0 0 0 rgba(126,224,138,0)}}
+  /* the page: player bar and library wide on the left, queue and moving in a narrow column on the right */
+  .mgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:6px;align-items:start;margin-top:22px}
+  .mgrid > div{display:grid;gap:6px;align-content:start}
+  .mgrid .sblk{margin:0}
+  @media (max-width:900px){ .mgrid{grid-template-columns:1fr} .mtiles{grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px} }
   .popup .mpop .modes.mtabs{margin-top:18px}
   .popup .mpop .modes.mtabs button{padding-left:2px;padding-right:2px;font-size:10px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .popup .mpop .mtiles{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}

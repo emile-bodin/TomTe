@@ -104,6 +104,7 @@ check(/Reset sessie/.test(html()) && /Reset week/.test(html()) && /ChatGPT/.test
 el.route = { path: "/muziek", prefix: "/tomte" }; el.stab = null;
 await settle(400); await settle(200);
 check(/Vrijdagavond/.test(html()) && /Rhiannon/.test(html()), "Muziek page shows favourites and the queue of the playing speaker");
+check(!!el.shadowRoot.querySelector(".mbar .mbtns button.main") && !!el.shadowRoot.querySelector(".mbar .mvol input[type=range]") && !!el.shadowRoot.querySelector(".ppills.mspk button.on.playing"), "Muziek page: player bar with controls and volume, the playing speaker picked and marked");
 el.musicQuery = ""; el.shadowRoot.querySelector(".msearch input").value = "go"; el.shadowRoot.querySelector(".msearch input").dispatchEvent(new w.Event("input"));
 await settle(700);
 check(/Go Your Own Way/.test(html()), "Muziek page: search shows hits");

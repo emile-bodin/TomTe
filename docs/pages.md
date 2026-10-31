@@ -36,7 +36,7 @@ Home Assistant version and uptime, host info from the Supervisor (when available
 
 ## Music
 
-Only there when Home Assistant has the **Music Assistant** integration. Pills at the top pick a speaker (the one that plays comes first). Then what plays now on every speaker (tap to pause), the queue of the chosen speaker, buttons to move its music to another speaker, a search field, and your favourites from Music Assistant as artwork tiles; a tap plays it on the chosen speaker. Mark music as a favourite with the heart in Music Assistant.
+Only there when Home Assistant has the **Music Assistant** integration. Pills at the top are the speakers: playing ones first with a pulsing dot, paused ones with a ring. The page steers the speaker that started playing last, or the one you tap (it stays picked). On the left a slim player bar shows what plays on it with previous / play-pause / next and the volume, and below it one search field over your favourites from Music Assistant (artwork tiles; while you search, the hits); a tap plays it on the chosen speaker. On the right the queue of that speaker and buttons to move its music to another one. Mark music as a favourite with the heart in Music Assistant.
 
 !!! note
     Search and favourites need the id of the Music Assistant integration. An administrator's panel finds it and stores it in the household settings, so other users get it too: open the Music page once as an administrator.

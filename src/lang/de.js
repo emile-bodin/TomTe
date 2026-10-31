@@ -130,6 +130,9 @@ export default {
   "Speakers": "Lautsprecher",
   "vink aan waar het bericht klinkt": "ankreuzen, wo die Nachricht läuft",
   // Music Assistant
+  "Zachter": "Leiser",
+  "Harder": "Lauter",
+  "Speelt": "Spielt",
   "{x} speelt op {n}": "{x} läuft auf {n}",
   "Muziek naar {n}": "Musik nach {n}",
   "Music Assistant is niet gevonden.": "Music Assistant wurde nicht gefunden.",
@@ -152,7 +155,6 @@ export default {
   "{n} speakers · {m} spelen": "{n} Lautsprecher · {m} spielen",
   "Music Assistant openen": "Music Assistant öffnen",
   "Geen speakers van Music Assistant gevonden.": "Keine Lautsprecher von Music Assistant gefunden.",
-  "Speelt nu": "Läuft gerade",
   "Wachtrij": "Warteschlange",
   "Verplaats naar": "Verschieben nach",
   "van {n}": "von {n}",

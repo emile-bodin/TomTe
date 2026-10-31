@@ -241,6 +241,9 @@ export default {
   "Speakers": "Speakers",
   "vink aan waar het bericht klinkt": "tick where the message plays",
   // Music Assistant
+  "Zachter": "Quieter",
+  "Harder": "Louder",
+  "Speelt": "Playing",
   "{x} speelt op {n}": "{x} is playing on {n}",
   "Muziek naar {n}": "Music moved to {n}",
   "Music Assistant is niet gevonden.": "Music Assistant was not found.",
@@ -263,7 +266,6 @@ export default {
   "{n} speakers · {m} spelen": "{n} speakers · {m} playing",
   "Music Assistant openen": "Open Music Assistant",
   "Geen speakers van Music Assistant gevonden.": "No Music Assistant speakers found.",
-  "Speelt nu": "Now playing",
   "Wachtrij": "Queue",
   "Verplaats naar": "Move to",
   "van {n}": "from {n}",

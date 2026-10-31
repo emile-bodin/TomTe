@@ -10,7 +10,7 @@ import { spark } from "./extras3.js";
 import { name, deviceName } from "./model.js";
 import { pendingUpdates, installUpdate } from "./features.js";
 import { pickNet, etaText } from "./extras3.js";
-import { maPlayers, playerName, favTiles, searchBox, queueList, movePills } from "./music.js";
+import { maPlayers, playerName, queueList, movePills, playerBar, library, speakerList, pickSpeaker } from "./music.js";
 
 export const PAGES = {
   automatiseringen: { label: t("Automatiseringen"), sub: t("aan, uit en fouten"), icon: "mdi:robot-outline", ha: "/config/automation/dashboard" },
@@ -192,22 +192,24 @@ function sensors(p) {
 
 /* ---------- music: Music Assistant speakers; pick one, then favourites, search, its queue and moving its music ---------- */
 function music(p) {
-  const all = maPlayers(p.hass).filter(s => !unavailable(s) && s.attributes.mass_player_type === "player").sort((a, b) => playerName(p.hass, a).localeCompare(playerName(p.hass, b), locale()));
-  const playing = all.filter(s => s.state === "playing" && s.attributes.source === "Music Assistant Queue");
-  const target = all.find(s => s.entity_id === p.musicTarget) || playing[0] || all[0], id = target?.entity_id;
+  const all = speakerList(p.hass), target = pickSpeaker(all, p.musicTarget), id = target?.entity_id;
+  const playing = all.filter(s => s.state === "playing").length;
   const ma = Object.entries(p.hass.panels || {}).find(([k, v]) => /music.?assistant/i.test(k + " " + (v.title || "")));
-  const now = playing.map(s => srow({ icon: "mdi:speaker", svg: "music", name: s.attributes.media_title || playerName(p.hass, s), sub: [playerName(p.hass, s), s.attributes.media_artist].filter(Boolean).join(" · "), pill: t("Pauze"), on: true, tap: () => p.call("media_player", "media_pause", { entity_id: s.entity_id }) }));
-  return { sub: t("{n} speakers · {m} spelen", { n: all.length, m: playing.length }),
-    head: html`<div class="ppills">${all.map(s => html`<button class=${classMap({ on: s.entity_id === id })} @click=${() => { p.musicTarget = s.entity_id; }}>${ico("mdi:speaker", "music")}${playerName(p.hass, s)}</button>`)}</div>`,
+  const on = target ? playerName(p.hass, target) : "";
+  // pills: playing first with a pulsing dot, paused with a ring; the speaker the page steers is the highlighted one. A tap picks it and
+  // keeps it picked, so the page does not jump to another speaker that starts playing meanwhile.
+  const pill = s => html`<button class=${classMap({ on: s.entity_id === id, playing: s.state === "playing", paused: s.state === "paused" })} title=${s.attributes.media_title || ""} @click=${() => { p.musicTarget = s.entity_id; }}>${s.state === "playing" || s.state === "paused" ? html`<i></i>` : nothing}${playerName(p.hass, s)}</button>`;
+  return { sub: t("{n} speakers · {m} spelen", { n: all.length, m: playing }),
+    head: html`<div class="ppills mspk">${all.map(pill)}</div>`,
     tools: ma ? html`<a class="pill hab" @click=${() => p.goPath("/" + ma[0])}><ha-icon icon="mdi:open-in-new"></ha-icon><span>${t("Music Assistant openen")}</span></a>` : nothing,
     body: !id ? html`<div class="hint" style="margin-top:20px;opacity:.75;font-size:13px">${t("Geen speakers van Music Assistant gevonden.")}</div>` : html`
-      <div class="sblks">
-        ${sblock(t("Speelt nu"), now, `${playing.length}`)}
-        <div class="sblk mblk"><h3>${t("Wachtrij")}<b>${playerName(p.hass, target)}</b></h3><div class="mbody">${queueList(p, id)}</div></div>
-        <div class="sblk mblk"><h3>${t("Verplaats naar")}<b>${t("van {n}", { n: playerName(p.hass, target) })}</b></h3><div class="mbody">${movePills(p, id)}</div></div>
-        <div class="sblk mblk"><h3>${t("Zoeken")}<b>${t("speelt op {n}", { n: playerName(p.hass, target) })}</b></h3><div class="mbody">${searchBox(p, id)}</div></div>
-      </div>
-      <section class="sec"><h3>${t("Favorieten")}<b>${t("speelt op {n}", { n: playerName(p.hass, target) })}</b></h3>${favTiles(p, id)}</section>` };
+      <div class="mgrid">
+        <div>${playerBar(p, id)}<div class="sblk mblk"><h3>${(p.musicQuery || "").trim().length >= 2 ? t("Zoeken") : t("Favorieten")}<b>${t("speelt op {n}", { n: on })}</b></h3><div class="mbody">${library(p, id)}</div></div></div>
+        <div>
+          <div class="sblk mblk"><h3>${t("Wachtrij")}<b>${on}</b></h3><div class="mbody">${queueList(p, id)}</div></div>
+          <div class="sblk mblk"><h3>${t("Verplaats naar")}<b>${t("van {n}", { n: on })}</b></h3><div class="mbody">${movePills(p, id)}</div></div>
+        </div>
+      </div>` };
 }
 
 /* ---------- cameras: live snapshots as cards, tap for the stream ---------- */
