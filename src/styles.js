@@ -487,6 +487,13 @@ export const styles = css`
   .popup h2 .hb button.on{background:rgba(255,255,255,.3)}
   /* ••• menu: the floor-nav dropdown glass, hung under the button; lives next to .popup (not inside: overflow:auto would clip it) */
   .pw{position:relative;display:flex;justify-content:center;max-width:100%}
+  /* people popup: fills the screen with its map, the people in one row below */
+  .pw.full{width:100%;height:100%;align-items:center}
+  .popup.full{width:calc(100% - 32px);height:calc(100% - 32px);min-width:0;max-width:none;max-height:none;display:flex;flex-direction:column;overflow:hidden;padding:20px 24px}
+  .popup.full .sub{margin-bottom:12px}
+  .popup.full hcn-people-map{flex:1}
+  .popup ul.who{flex:none;flex-direction:row;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .popup ul.who li{flex:none;grid-template-columns:30px max-content max-content;gap:10px;padding:8px 12px;font-size:14px}
   .pmenu{position:absolute;top:70px;right:68px;z-index:3;min-width:250px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:var(--r);background:rgba(44,46,50,.8);backdrop-filter:blur(24px) saturate(1.2);-webkit-backdrop-filter:blur(24px) saturate(1.2);border:1px solid var(--line);box-shadow:0 14px 34px rgba(0,0,0,.25);animation:downT .18s var(--ease) both}
   .pmenu a{display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px 6px 12px;border-radius:var(--r-sm);font-size:14px;font-weight:600;cursor:pointer;line-height:1.25}
   .pmenu a:hover{background:rgba(255,255,255,.1)}
@@ -496,6 +503,14 @@ export const styles = css`
   .pmenu .who,.pmenu .cancel{display:none}
   @media (max-width:900px){
     .pw{position:static;width:100%}
+    .popup.full{padding:16px}
+    /* two columns so everyone stays in view: name with the status below it, the time makes way */
+    .popup ul.who{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .popup ul.who li{grid-template-columns:30px minmax(0,1fr);gap:0 8px;padding:7px 10px}
+    .popup ul.who li > :first-child{grid-row:1 / 3}
+    .popup ul.who li > div,.popup ul.who li .st{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .popup ul.who li small{display:none}
+    .popup ul.who li .st{grid-column:2;font-size:10px}
     .pmenu{position:fixed;top:auto;left:16px;right:16px;bottom:calc(16px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));min-width:0;animation:upT .22s var(--ease) both}
     .pmenu::before{content:"";position:fixed;inset:-100vh 0 -100vh;background:rgba(20,20,20,.5);z-index:-1}   /* scrim over the popup; a tap on it closes the sheet */
     .pmenu .who{display:flex;gap:12px;align-items:center;padding:10px 12px 12px;border-bottom:1px solid var(--line);margin-bottom:4px}

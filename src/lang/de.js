@@ -189,5 +189,6 @@ export default {
   "Termijnbedrag per maand": "Monatlicher Abschlag",
   "wat je maandelijks vooruitbetaalt; de Verbruik-popup vergelijkt het met een jaar verbruik": "was du monatlich vorauszahlst; das Verbrauch-Popup vergleicht es mit einem Jahr Verbrauch",
   "Vaste kosten per maand": "Fixkosten pro Monat",
+  "Kaart niet beschikbaar": "Karte nicht verfügbar",
   "vastrecht en netbeheer min de vermindering energiebelasting, van stroom en gas samen": "Grundgebühr und Netzentgelte abzüglich der Energiesteuer-Ermäßigung, Strom und Gas zusammen",
 };

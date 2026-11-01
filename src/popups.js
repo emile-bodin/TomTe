@@ -18,6 +18,7 @@ import { usagePopup, USAGE_PROVIDERS } from "./usage.js";
 import { costsBig, costsPopup } from "./costs.js";
 import { siblings, maintenance, vacTask, vacStatus, VAC_LABELS, BUSY } from "./vacuum.js";
 import { isMA, favTiles, searchBox, queueList, movePills } from "./music.js";
+import "./peoplemap.js";
 
 const entityOf = pop => pop.type === "cardcfg" ? pop.key : pop.e?.id || pop.s?.entity_id || pop.st?.id || pop.a?.id || (pop.type === "weather" ? CUR?.p?.home?.weather?.entity_id : null) || null;
 /** header buttons: ⋯ (card options) when the popup belongs to an entity, and close */
@@ -92,7 +93,8 @@ const wrap = (title, big, sub, body) => {
   const form = !!(pop.form && entityOf(pop));                // popups without an entity (presets) render their own form
   if (form) { body = cardForm(p, pop); title = html`<span>${t("Kaart instellen")}<span class="rm"> · ${title}</span></span>`; sub = t("Zo ziet de kaart eruit met deze instellingen"); }
   // .pw: the popup plus its ••• menu; a click anywhere in it (outside the menu) closes the menu
-  return html`<div class="pw" @click=${() => { if (pop.menu) p.openPopup({ ...pop, menu: false }); }}><div class=${form ? "popup wide cardf" : "popup"}><h2>${title} ${hbtns(p, pop)}</h2><div class="big">${big}</div><div class="sub">${sub}</div>${body}</div>${pop.menu && entityOf(pop) ? optionsMenu(p, pop) : nothing}</div>`;
+  const full = pop.type === "people";                        // fills the screen around its map
+  return html`<div class=${full ? "pw full" : "pw"} @click=${() => { if (pop.menu) p.openPopup({ ...pop, menu: false }); }}><div class=${form ? "popup wide cardf" : full ? "popup full" : "popup"}><h2>${title} ${hbtns(p, pop)}</h2><div class="big">${big}</div><div class="sub">${sub}</div>${body}</div>${pop.menu && entityOf(pop) ? optionsMenu(p, pop) : nothing}</div>`;
 };
 /** a switch whose device also has a power sensor or an operation-state sensor can be shown as an appliance (bezig / klaar) */
 const applianceCapable = (p, id) => { const dev = p.hass.entities?.[id]?.device_id; return !!dev && Object.values(p.hass.entities).some(e => e.device_id === dev && e.entity_id !== id && (p.hass.states[e.entity_id]?.attributes.device_class === "power" || p.hass.states[e.entity_id]?.attributes.unit_of_measurement === "W" || e.translation_key === "operation_state" || /_operation_state$|^sensor\..*_machine_state$/.test(e.entity_id))); };
@@ -438,7 +440,8 @@ export function renderPopup(p, pop) {
         <ul>${home.waste.map((w, i) => li("mdi:trash-can-outline", html`<i class="dot" style="background:${wasteColor(w.label)}"></i>${w.label}`, wasteWhen(w), { on: i === 0, sub: w.days > 7 && w.date ? new Date(w.date).toLocaleDateString(locale(), { weekday: "long" }) : "" }))}</ul>`);
     case "people":
       return wrap(t("Wie is thuis"), t("{n} van {m}", { n: home.home, m: home.persons.length }), home.persons.filter(s => s.state === "home").map(s => s.attributes.friendly_name).join(", ") || t("Niemand thuis"), html`
-        <ul>${home.persons.map(s => li("mdi:account-outline", s.attributes.friendly_name, s.state === "home" ? t("Thuis") : s.state === "not_home" ? t("Weg") : s.state, { on: s.state === "home", sub: relTime(s.last_changed), img: s.attributes.entity_picture || null }))}</ul>`);
+        <hcn-people-map .hass=${hass} .ids=${home.persons.map(s => s.entity_id)}></hcn-people-map>
+        <ul class="who">${home.persons.map(s => li("mdi:account-outline", s.attributes.friendly_name, s.state === "home" ? t("Thuis") : s.state === "not_home" ? t("Weg") : s.state, { on: s.state === "home", sub: relTime(s.last_changed), img: s.attributes.entity_picture || null }))}</ul>`);
     case "weather": {
       const w = home.weather, a = w.attributes, fc = pop.forecast || [], dfc = (pop.dailyForecast || []).slice(0, 7);
       const hourly = fc.filter(f => f.datetime && (new Date(f.datetime) - Date.now()) < 36e5 * 30).slice(0, 8);

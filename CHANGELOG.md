@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **New: the people pill opens a map with today's routes.** It only showed a short list of who is home. The popup now fills the screen with Home Assistant's own map: everyone's position, their routes since midnight and your zones, with the people in a row below
+
 ## 1.5.1 · 2026-11-01
 
 - **Fix: the instalment check in the Verbruik popup follows your contract year.** It compared the last 12 whole months, which do not match the year your supplier settles. Enter the contract date under Settings → Energy: the popup now shows that year with its dates, the use so far plus the rest estimated from the same days last year, against 12 instalments. It gives no verdict until the date is filled in.

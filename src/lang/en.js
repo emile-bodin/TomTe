@@ -298,5 +298,6 @@ export default {
   "Termijnbedrag per maand": "Monthly instalment",
   "wat je maandelijks vooruitbetaalt; de Verbruik-popup vergelijkt het met een jaar verbruik": "what you prepay each month; the usage popup compares it with a year of use",
   "Vaste kosten per maand": "Fixed costs per month",
+  "Kaart niet beschikbaar": "Map not available",
   "vastrecht en netbeheer min de vermindering energiebelasting, van stroom en gas samen": "standing and grid charges minus the energy tax reduction, electricity and gas together",
 };
