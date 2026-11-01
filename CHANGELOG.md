@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.6.0 · 2026-11-01
+
 - **New: the people pill opens a map with today's routes.** It only showed a short list of who is home. The popup now fills the screen with Home Assistant's own map: everyone's position, their routes since midnight and your zones, with the people in a row below
 
 ## 1.5.1 · 2026-11-01
