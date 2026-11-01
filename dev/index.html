@@ -30,7 +30,7 @@
   el.fileConfig = {
     title: "Home.", rooms: ["living_room", "kitchen", "bedroom", "dressing_room", "landing", "attic", ...(new URLSearchParams(location.search).has("lab") ? ["test_lab"] : [])],
     roomImage: "/images/rooms/{slug}.jpg", homeImage: img("backyard"),
-    pages: { living_room: { image: img("livingroom") }, kitchen: { image: img("kitchen") }, bedroom: { image: img("lounge") }, dressing_room: { image: img("dressing") }, landing: { image: img("landing") }, attic: { image: img("office") } },
+    pages: { home: { add: ["costs"] }, living_room: { image: img("livingroom") }, kitchen: { image: img("kitchen") }, bedroom: { image: img("lounge") }, dressing_room: { image: img("dressing") }, landing: { image: img("landing") }, attic: { image: img("office") } },
     home: { weather: "weather.home", energy: { power: "sensor.p1_power", today: "sensor.p1_energy_today" },
       waste: [{ entity: "sensor.waste_bio", label: "Bio" }, { entity: "sensor.waste_plastic", label: "Plastic" }, { entity: "sensor.waste_paper", label: "Paper" }] },
     more: [],

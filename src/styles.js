@@ -8,6 +8,7 @@ import { searchStyles } from "./search.js";
 import { extra3Styles } from "./extras3.js";
 import { graphStyles } from "./graph.js";
 import { usageStyles } from "./usage.js";
+import { costsStyles } from "./costs.js";
 import { musicStyles } from "./music.js";
 
 // Started from our own Homio-style mockup; scoped to the panel host.
@@ -23,6 +24,12 @@ const cardCompact = (all, compact) => `
   ${compact} .card.usage .s{display:none}
   ${compact} .card.usage .ml{font-size:9px;letter-spacing:1.2px}
   ${compact} .card.usage .m b{font-size:12px}
+  ${all} .card.costs{--lh:42px}
+  ${all} .card.costs .s{display:block}
+  ${all} .card.costs .cd,${all} .card.costs .cl,${all} .card.costs .cr em{display:none}
+  ${all} .card.costs .cc{padding:0 9px}
+  ${all} .card.costs .ch{font-size:9px;letter-spacing:1.2px;margin-bottom:2px}
+  ${all} .card.costs .cr b{font-size:14px}
   ${compact} .card.appl2 .ctl.row button{padding:0 8px;gap:5px;font-size:10px;letter-spacing:.6px}
   ${compact} .card .i{margin-left:-2px}
   ${compact} .card .c{font-size:9px;letter-spacing:1.2px}
@@ -95,6 +102,7 @@ export const styles = css`
     --card:rgba(255,255,255,.10); --card-on:rgba(255,255,255,.34);
     --line:rgba(255,255,255,.14); --line-on:rgba(255,255,255,.38); --accent:#f2b63a;
     --pad:8vw; --u:clamp(1px, min(.07vw, .12vh), 1.25px); --card-h:calc(200 * var(--u)); --card-w:calc(var(--card-h) * 1.6); --card-gap:6px;
+    --tile-h:calc(180 * var(--u)); --tile-w:calc(var(--tile-h) * 1.6);   /* the strip's cards on wide screens; _fitCards() sets both per screen */
     --r:8px; --r-sm:6px; --ease:cubic-bezier(.2,.7,.2,1);
     --font:"Hanken Grotesk",Roboto,system-ui,sans-serif;
     display:block;height:100vh;overflow:hidden;position:relative;
@@ -240,12 +248,20 @@ export const styles = css`
   .sfade.l.on{opacity:1}
   .strip::after{content:"";flex:none;width:var(--pad)}
   .strip.drag{cursor:grabbing;scroll-snap-type:none}
-  .strip.rows2{--rows2-scale:.9;--rows2-card-h:calc(180 * var(--u));--rows2-card-w:calc(288 * var(--u));display:block;height:calc(var(--rows2-card-h) * 2 + var(--card-gap) + 12px);overflow-x:auto;overflow-y:hidden}
+  .strip.rows2{--rows2-scale:1;--rows2-card-h:var(--card-h);--rows2-card-w:var(--card-w);display:block;height:calc(var(--rows2-card-h) * 2 + var(--card-gap) + 12px);overflow-x:auto;overflow-y:hidden}
   .room-rows{display:flex;flex-direction:column;gap:var(--card-gap);width:max-content;min-width:100%}
   .room-row{display:flex;gap:var(--card-gap);width:max-content;min-height:var(--rows2-card-h, var(--card-h))}
   .room-cell{position:relative;flex:none;width:var(--rows2-card-w);height:var(--rows2-card-h)}
   .room-scale{position:absolute;left:0;top:0;width:var(--card-w);height:var(--card-h);transform:scale(var(--rows2-scale));transform-origin:top left}
-  .sfade.rows2{height:calc(360 * var(--u) + var(--card-gap) + 12px)}
+  .sfade.rows2{height:calc(var(--card-h) * 2 + var(--card-gap) + 12px)}
+  /* wide screens: every page's cards share one size (--tile-h). A room keeps a zone of two rows above the bottom line with its title
+     above that zone, so the title never moves between rooms; one row sits on the top line of the zone, right under the title. */
+  @media (min-width:901px){
+    .strip,.sfade{--card-h:var(--tile-h);--card-w:var(--tile-w)}
+    .title.rt{top:auto;bottom:calc(85px + var(--tile-h) * 2 + var(--card-gap) + 12px + 24px);transform:none}
+    .strip.room:not(.rows2),.sfade.room:not(.rows2){bottom:calc(85px + var(--tile-h) + var(--card-gap))}
+    .strip.room ~ .empty{bottom:calc(85px + var(--tile-h) * 2 + var(--card-gap) - 24px)}   /* an empty room says so where its first row would start */
+  }
   /* layout: icon + corner text on top, name/state centred in what is left, caps line at the bottom */
   .card{flex:none;width:var(--card-w);height:var(--card-h);background:var(--card);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);border:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 12px 32px rgba(0,0,0,.18);--cp:22px;--lh:28px;--bh:34px;--bh-sock:56px;--bh-media:42px;--bh-tile:52px;--bg:10px;--gut:14px;--ib:36px;--ctl-w:46px;--vs-w:12px;--rr:0px;--rc:0px;--rl:0px;--reserve:0px;padding:var(--cp) calc(var(--cp) + var(--rr)) calc(var(--cp) + var(--reserve)) calc(var(--cp) + var(--rl));display:grid;grid-template-columns:minmax(0,1fr) max-content;--a-base:"i c" ". ." "n n" "s s" ". ." "l l";--r-base:max-content 1fr max-content max-content 1fr var(--lh);--a-capt:"i c" ". ." "n n" "s s" "l l" ". .";--r-capt:max-content 1fr max-content max-content max-content 1fr;--a-hero:"i c" ". ." "s s" "n n" ". ." "l l";--a-hero-capt:"i c" ". ." "s s" "n n" "l l" ". .";--a-hero-foot:"i c" ". ." "s s" "n n" "l l" ". ." "f f";--r-foot:max-content 1fr max-content max-content max-content 1fr max-content;--a-cam:"i c" ". ." "n n" "s s";--r-cam:max-content 1fr max-content max-content;grid-template-areas:var(--areas,var(--a-base));grid-template-rows:var(--rows,var(--r-base));scroll-snap-align:start;position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;animation:rise .55s var(--ease) both;transition:transform .25s var(--ease),background .25s,border-color .25s,padding .3s}
   /* hero order: the big value above its name (climate, plug, value cards); every other card is name above status */
@@ -783,12 +799,7 @@ export const styles = css`
   }
 
   @media (min-width:600px) and (max-width:900px){
-    .strip{grid-template-columns:1fr 1fr 1fr}
-    .strip.rows2{--rows2-scale:.9;--card-h:200px;--card-w:320px;--rows2-card-h:180px;--rows2-card-w:288px;display:block;overflow-x:auto;overflow-y:auto}
-    .strip.rows2 .room-rows{display:flex}
-    .strip.rows2 .room-row{display:flex}
-    .strip.rows2 .room-cell{display:block}
-    .strip.rows2 .room-scale{display:block}
+    .strip{grid-template-columns:1fr 1fr 1fr}   /* two rows falls back to this grid too: it already shows every card */
   }
   ${unsafeCSS(pageStyles)}
   ${unsafeCSS(extraStyles)}
@@ -799,18 +810,21 @@ export const styles = css`
   ${unsafeCSS(extra3Styles)}
   ${unsafeCSS(graphStyles)}
   ${unsafeCSS(usageStyles)}
+  ${unsafeCSS(costsStyles)}
   ${unsafeCSS(musicStyles)}
   @media (max-width:900px){
     .card{width:auto}
     ${unsafeCSS(cardCompact("", ""))}
   }
   @media (min-width:901px){
-    ${unsafeCSS(cardCompact(":where(.strip.rows2)", ":where(.strip.rows2.compact)"))}
-    :where(.strip.rows2.compact) .card.appl:not(.plug){--reserve:calc(var(--bh) + var(--bg))}   /* under 160px there is no room for the name at its usual height above the row */
-    :where(.strip.rows2.compact) .card.graph .lbl{display:none}   /* under 160px the period text would run into the name */
-    :where(.strip.rows2.compact) .card.actions{--rc:var(--rr)}   /* the control column is as tall as the card: the corner text moves left of it */
-    /* two rows under 160px: the media buttons are as low as the other cards' buttons, so the card keeps its icon and status row like every other card */
-    :where(.strip.rows2.compact) .card.media{--bh-media:26px}
+    ${unsafeCSS(cardCompact(":where(.strip.tile-s)", ":where(.strip.compact)"))}
+    :where(.strip.tile-s) .card.graph .s{display:none}   /* under 200px the average line pushes the period text off the card */
+    :where(.strip.tile-s) .card.plug.hasspk .n{-webkit-line-clamp:1}   /* next to the sparkline a long name takes two lines and the peak line falls off */
+    :where(.strip.compact) .card.appl:not(.plug){--reserve:calc(var(--bh) + var(--bg))}   /* under 160px there is no room for the name at its usual height above the row */
+    :where(.strip.compact) .card.graph .lbl{display:none}   /* under 160px the period text would run into the name */
+    :where(.strip.compact) .card.actions{--rc:var(--rr)}   /* the control column is as tall as the card: the corner text moves left of it */
+    /* under 160px: the media buttons are as low as the other cards' buttons, so the card keeps its icon and status row like every other card */
+    :where(.strip.compact) .card.media{--bh-media:26px}
   }
   /* unavailable: controls are hidden, so center what is left */
   .card.unavailable{grid-template-columns:1fr;grid-template-rows:1fr max-content max-content 1fr;grid-template-areas:"." "n" "s" ".";justify-items:center;text-align:center;padding:0 40px}

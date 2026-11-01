@@ -53,7 +53,7 @@ class TomtePanel extends LitElement {
     this.loadConfig();
     this._clock = setInterval(() => { this.now = clock(); }, 15000);
     this._ticker = setInterval(() => { this.tick++; }, 4000);
-    this._onFit = () => this._fitRows2(); addEventListener("resize", this._onFit);
+    this._onFit = () => this._fitCards(); addEventListener("resize", this._onFit);
     this._onKey = e => { if (e.key === "Escape") { if (this.popup?.menu) { this.popup = { ...this.popup, menu: false }; return; } if (!this.popup && this.edit) { this.stopEdit(); return; } this.popup = null; this.search = ""; this.searchOpen = false; } };
     addEventListener("keydown", this._onKey);
     // inside a Lovelace card the dashboard owns the URL path, so rooms are routed through the hash
@@ -198,7 +198,7 @@ class TomtePanel extends LitElement {
   }
 
   updated(changed) {
-    this._fitRows2();
+    this._fitCards();
     const key = this.settings ? "settings" : this.page || (this.room ? this.room.id : "home");
     if (key !== this._viewKey) { this._viewKey = key; requestAnimationFrame(() => { this.style.transform = "translateZ(0)"; requestAnimationFrame(() => { this.style.transform = ""; }); }); }
   }
@@ -412,24 +412,26 @@ class TomtePanel extends LitElement {
 
   /* ---------- strip: wheel + mouse drag ---------- */
   _stripScroll(e) { const on = e.currentTarget.scrollLeft > 4; if (on !== !!this.stripScrolled) this.stripScrolled = on; }
-  stripFades(rows = 1) { return html`<div class=${classMap({ sfade: true, l: true, on: !!this.stripScrolled, rows2: rows === 2 })}></div><div class=${classMap({ sfade: true, r: true, rows2: rows === 2 })}></div>`; }
+  stripFades(rows = 1, room = false) { return html`<div class=${classMap({ sfade: true, l: true, on: !!this.stripScrolled, rows2: rows === 2, room })}></div><div class=${classMap({ sfade: true, r: true, rows2: rows === 2, room })}></div>`; }
   /** two rows of cards (rooms with Kaartindeling = two rows): the cards split over two lines, each in a cell that scales it down */
   roomRows(cards) {
     const half = Math.ceil(cards.length / 2), row = list => html`<div class="room-row">${list.map(c => html`<div class="room-cell"><div class="room-scale">${c}</div></div>`)}</div>`;
     return html`<div class="room-rows">${row(cards.slice(0, half))}${row(cards.slice(half))}</div>`;
   }
-  /** wide screens: size the two rows to the space under the title (cards between 120 and 180px high; below 160px they get the compact layout) */
-  _fitRows2() {
-    const strip = this.renderRoot?.querySelector(".strip.rows2"), title = this.renderRoot?.querySelector(".title");
+  /** wide screens: one card size per screen, never per page, so rooms with one and two rows line up. Two rows of cards must fit between
+      the nav and the strip's bottom line with the room title above them; the title reserve comes from the h1 size, not from the page.
+      Cards under 200px get the climate/media variants (.tile-s), under 160px the compact layout (.compact). */
+  _fitCards() {
+    const strip = this.renderRoot?.querySelector(".strip");
     if (!strip) return;
-    const targets = [strip, ...this.renderRoot.querySelectorAll(".sfade.rows2")], props = ["--rows2-scale", "--rows2-card-h", "--rows2-card-w", "--card-h", "--card-w", "height"];
-    if (innerWidth <= 900 || !title) { strip.classList.remove("compact"); targets.forEach(el => props.forEach(pr => el.style.removeProperty(pr))); return; }
-    const gap = parseFloat(getComputedStyle(strip).getPropertyValue("--card-gap")) || 6, free = strip.getBoundingClientRect().bottom - title.getBoundingClientRect().bottom - 24 - 12 - gap;
-    const h = Math.round(Math.max(120, Math.min(180, free / 2))), w = Math.round(h * 1.6), total = `${h * 2 + gap + 12}px`;
+    if (innerWidth <= 900) { strip.classList.remove("tile-s", "compact"); ["--tile-h", "--tile-w"].forEach(pr => this.style.removeProperty(pr)); return; }
+    const gap = parseFloat(getComputedStyle(this).getPropertyValue("--card-gap")) || 6, u = Math.min(1.25, Math.max(1, Math.min(innerWidth * .0007, innerHeight * .0012)));   // --u in styles.js
+    const nav = this.renderRoot.querySelector(".nav")?.getBoundingClientRect().bottom || 86, h1 = Math.min(92, Math.max(48, innerWidth * .066));
+    const free = innerHeight - 85 - 12 - gap - nav - 24 - (h1 + 90) - 24;
+    const h = Math.round(Math.max(120, Math.min(180 * u, free / 2))), w = Math.round(h * 1.6);
+    strip.classList.toggle("tile-s", h < 200);
     strip.classList.toggle("compact", h < 160);
-    strip.style.setProperty("--rows2-scale", 1);
-    [["--rows2-card-h", h], ["--card-h", h], ["--rows2-card-w", w], ["--card-w", w]].forEach(([k, v]) => strip.style.setProperty(k, v + "px"));
-    targets.forEach(el => el.style.height = total);
+    this.style.setProperty("--tile-h", h + "px"); this.style.setProperty("--tile-w", w + "px");
   }
   /** energy page: today's use and return per hour, power peak and a 3 h sparkline */
   async loadEnergyToday() {
@@ -593,7 +595,7 @@ class TomtePanel extends LitElement {
     const i = items.length ? this.tick % items.length : 0;
     const date = new Date().toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
     const eyebrow = [date, temp != null ? t("{t}° binnen", { t: temp.toFixed(1) }) : "", hum != null ? t("{h}% luchtvochtigheid", { h: Math.round(hum) }) : ""].filter(Boolean);
-    return html`<section class=${classMap({ title: true, aside: aside !== nothing })} ${pressDir(this, { tap: () => {}, hold: () => canEdit(this) ? this.startEdit(pageKey) : this.openPopup({ type: "page", key: pageKey }) })}>
+    return html`<section class=${classMap({ title: true, aside: aside !== nothing, rt: pageKey !== "home" })} ${pressDir(this, { tap: () => {}, hold: () => canEdit(this) ? this.startEdit(pageKey) : this.openPopup({ type: "page", key: pageKey }) })}>
       <div class="tl">
         <div class="temp">${eyebrow.map((x, k) => html`${k ? html`<i class="dt"></i>` : nothing}<span>${x}</span>`)}</div>
         <h1>${title}</h1>
@@ -723,7 +725,7 @@ class TomtePanel extends LitElement {
     const rows = this.pageCfg(r.id).rows === 2 ? 2 : 1, editing = this.editing(r.id), cards = editing ? [editStrip(this, r.id, rows)] : this.applyPage(r.id, this.roomCards(r)).map(c => c.tpl);
     return html`
       ${this.renderTitle(r.temp, r.name, "", this.tickerOn(r.id, items), nothing, r.id, nothing, r.hum)}
-      <div class=${classMap({ strip: true, rows2: rows === 2 })} @pointerdown=${this._stripDown} @wheel=${this._stripWheel} @scroll=${this._stripScroll}>${rows === 2 && !editing ? this.roomRows(cards) : cards}</div>${this.stripFades(rows)}
+      <div class=${classMap({ strip: true, room: true, rows2: rows === 2 })} @pointerdown=${this._stripDown} @wheel=${this._stripWheel} @scroll=${this._stripScroll}>${rows === 2 && !editing ? this.roomRows(cards) : cards}</div>${this.stripFades(rows, true)}
       ${!cards.length ? html`<div class="empty">${t("Geen apparaten in deze ruimte.")}</div>` : nothing}
       ${editing ? editBar(this, r.id) : nothing}
       <div class=${classMap({ banner: true, show: r.motionOn && !editing })}><img class="ico" src=${icon("motion")} alt="">${t("Beweging in de {room}", { room: roomWord(r.name) })}</div>`;

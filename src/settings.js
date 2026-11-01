@@ -303,7 +303,9 @@ export function renderSettings(p) {
       ${field(t("Verbruik vandaag"), select(hass, "sensor", d.home?.energy?.today, v => setEnergy("today", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "kWh" }))}
       ${field(t("Teruggeleverd"), select(hass, "sensor", d.home?.energy?.returned, v => setEnergy("returned", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "kWh" }))}
       ${field(t("Prijs per kWh"), html`<input type="number" step="0.01" min="0" .value=${d.home?.energy?.price ?? ""} placeholder="0.30" @change=${e => setEnergy("price", e.target.value === "" ? undefined : +e.target.value)}>`, t("voor de kostenregel op stekkerkaarten"))}
-      ${field(t("Gas"), select(hass, "sensor", d.home?.energy?.gas, v => setEnergy("gas", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "m³" }))}`),
+      ${field(t("Gas"), select(hass, "sensor", d.home?.energy?.gas, v => setEnergy("gas", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "m³" }))}
+      ${field(t("Termijnbedrag per maand"), html`<input type="number" step="0.01" min="0" .value=${d.home?.energy?.term ?? ""} placeholder="150.00" @change=${e => setEnergy("term", e.target.value === "" ? undefined : +e.target.value)}>`, t("wat je maandelijks vooruitbetaalt; de Verbruik-popup vergelijkt het met een jaar verbruik"))}
+      ${field(t("Vaste kosten per maand"), html`<input type="number" step="0.01" .value=${d.home?.energy?.fixed ?? ""} placeholder="15.00" @change=${e => setEnergy("fixed", e.target.value === "" ? undefined : +e.target.value)}>`, t("vastrecht en netbeheer min de vermindering energiebelasting, van stroom en gas samen"))}`),
 
     ai: html`${[["claude", "Claude Code"], ["chatgpt", "ChatGPT"]].map(([prov, title]) => sec(title, t("kaart via Bewerken → Kaart toevoegen"), html`
       ${field(t("Sessie (5 uur)"), select(hass, "sensor", d.home?.[prov]?.session, v => setUsage(prov, "session", v), { empty: t("automatisch"), filter: s => s.attributes.unit_of_measurement === "%" }), t("percentage gebruikt in het 5-uursvenster"))}

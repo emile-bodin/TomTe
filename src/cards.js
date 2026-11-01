@@ -10,6 +10,7 @@ import { graphCard, stepGraph } from "./graph.js";
 import "./camsnap.js";
 import { siblings, maintenance, vacTask, vacStatus, BUSY } from "./vacuum.js";
 import { usageCard, USAGE_PROVIDERS } from "./usage.js";
+import { costsCard } from "./costs.js";
 
 const HOLD_MS = 500;
 
@@ -671,6 +672,7 @@ export function addedCard(p, key, pageKey) {
   if (key.startsWith("tpl:")) { const m = templateInstance(p, key); return m ? { label: m.name || t("Template"), tpl: templateCard(p, m, 0) } : null; }
   if (key.includes(".")) { const s = p.hass.states[key]; if (!s) return null; const e = { id: key, state: s, reg: p.hass.entities?.[key] || {} }; const tpl = cardFor(p, e); return tpl ? { label: label(p, e), tpl } : null; }
   if (USAGE_PROVIDERS[key]) { const tpl = usageCard(p, key); return tpl ? { label: USAGE_PROVIDERS[key].name, tpl } : null; }
+  if (key === "costs") { const tpl = costsCard(p); return tpl ? { label: t("Verbruik"), tpl } : null; }
   const c = findCard(p, key, pageKey); return c ? { label: c.label, tpl: c.tpl } : null;
 }
 /** one of the panel's own cards by key: "room:<id>:<key>" for a room-bound card, else a home card or a card of any room.

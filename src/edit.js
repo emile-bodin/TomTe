@@ -10,6 +10,7 @@ import { cardFor, homeCards, findCard } from "./cards.js";
 import { GRAPH_HOURS } from "./graph.js";
 import { scopePicker } from "./settings.js";
 import { usageAvailable } from "./usage.js";
+import { costsAvailable } from "./costs.js";
 
 export const canEdit = p => !!p.hass?.user?.is_admin;
 /** keys of cards the panel makes itself (not an entity, device or template instance) */
@@ -126,6 +127,7 @@ export const CARD_TYPES = [
   { id: "agenda", group: "panel", label: "Agenda", sub: "volgende afspraken", icon: "mdi:calendar-blank-outline", key: "agenda" },
   { id: "waste", group: "panel", label: "Afval", sub: "volgende ophaaldag", icon: "mdi:trash-can-outline", key: "waste" },
   { id: "energy", group: "panel", label: "Energie", sub: "vermogen en verbruik vandaag", icon: "mdi:flash-outline", key: "energy" },
+  { id: "costs", group: "panel", label: "Verbruik", sub: "stroom en gas: verbruik en kosten uit het Energy-dashboard", icon: "mdi:receipt-text-outline", key: "costs", avail: costsAvailable },
   { id: "attention", group: "panel", label: "Aandacht", sub: "onbereikbaar, batterij, updates", icon: "mdi:alert-circle-outline", key: "attention" },
   { id: "homeclimate", group: "panel", label: "Thermostaat (thuis)", sub: "de hoofdthermostaat", icon: "mdi:home-thermometer-outline", key: "climate" },
   { id: "scenes", group: "panel", label: "Scènes", sub: "scèneknoppen van een ruimte", icon: "mdi:palette-outline", roomKey: "scenes" },
@@ -156,7 +158,7 @@ export function addPopup(p, pop) {
     const pc = p.pageCfg(key);
     if ((pc.hidden || []).includes(k)) { await p.setHidden(key, k, false); p.popup = null; return; }
     if (have.has(k)) { p.showToast(t("Deze kaart staat al op deze pagina")); return; }
-    const exists = k === "claude" || k === "chatgpt" ? usageAvailable(p, k) : isHome ? homeCards(p, p.home).some(c => c.key === k) : !!findCard(p, k, key);
+    const exists = k === "costs" ? costsAvailable(p) : k === "claude" || k === "chatgpt" ? usageAvailable(p, k) : isHome ? homeCards(p, p.home).some(c => c.key === k) : !!findCard(p, k, key);
     if (!exists) { p.showToast(t("Deze kaart is nog niet ingesteld: zie Instellingen → Startpagina")); return; }
     await addKey(p, key, k);
   };

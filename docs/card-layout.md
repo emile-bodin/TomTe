@@ -21,7 +21,7 @@ Controls are not grid items. They are anchored to the bottom or the right edge, 
 |---|---|---|
 | `--reserve` | space under the content for a bottom control row | `.pstrip` (sockets), `.appl` / `.acts` (button rows), `.media` (transport), `.climate` (control row) |
 | `--rr` | space on the right for a control column | `.actions` (up / down), `.vs` (vertical slider), `.climate` (rail), `.hasspk` (sparkline), `.hassub` (sub-content) |
-| `--rc` | how far the corner text moves left of the right edge | `.vs`, `.climate`, and `.actions` in a compact two-row card |
+| `--rc` | how far the corner text moves left of the right edge | `.vs`, `.climate`, and `.actions` in a compact card on a wide screen |
 | `--rl` | space on the left | `.media` with artwork (the artwork panel) |
 
 Padding is always `--cp` plus those four.
@@ -43,7 +43,7 @@ Defined once on `.card`, changed once for the compact variant:
 | `--ib` | 36px | 26px | icon box and corner height |
 | `--bh` | 34px | 30px | button rows (appliance, actions) |
 | `--bh-sock` | 56px | 44px | socket buttons |
-| `--bh-media` | 42px | 34px (26px in two rows under 160px) | media transport buttons |
+| `--bh-media` | 42px | 34px (26px on a wide screen under 160px) | media transport buttons |
 | `--bh-tile` | 52px | 40px | scene and group tiles |
 | `--ctl-w` | 46px | 34px | the side control column |
 | `--vs-w` | 12px | 8px | vertical slider |
@@ -81,25 +81,28 @@ Each card in [Cards](cards.md) and the modifier classes that give it its layout.
 | Energy | base | base |
 | Group | `group`, `tiles` or `list` | chip tiles or member rows in `.s` |
 | Graph | `graph` | line band between icon and name (`--gl-*`) |
+| Verbruik | `costs` | power in the corner, a column each for electricity and gas in the bottom-line row (`--lh` = the height of the columns), the name directly above them; on low cards and in compact only this month's use, with `.s` saying so |
 | Claude Code, ChatGPT | `usage` | session time left in the corner, notice in the status line (amber), two meters in the bottom-line row (`--lh` = two meter rows `--um`, `--reserve` 0); amber from 70 %, red from 90 %; in compact the status line goes |
 | Template | the base card of the entity it is placed on | text, label and visibility come from Jinja; the layout is the base's |
 | Network | `net` | its own inner layout |
 
 ## Compact
 
-"Compact" is one thing with two triggers: a phone or tablet (`max-width: 900px`), and the two-row layout on a wide screen (`.strip.rows2`, and `.compact` when the cards are under 160px high). The rules are written once in `cardCompact(all, compact)` and used for both. What only changes a size is a token; the rules in the function are the ones that hide, move or reorder something. They are placed after every module's own card rules, so they win by position.
+On a wide screen the card size comes from the screen, never from the page: `_fitCards()` in `src/panel.js` sets `--tile-h` and `--tile-w` on the panel (180px times `--u`, less when two rows plus the room title don't fit, never under 120px) and the strip's `--card-h`/`--card-w` follow them, for one row, two rows and the home page. A room always keeps a zone of two rows above the bottom line with its title (`.title.rt`) above that zone, so the title is in the same place on every room; a room with one row sits on the top line of the zone. On a portrait tablet (600–900px) two rows falls back to the three-column grid.
+
+"Compact" is one thing with two triggers: a phone or tablet (`max-width: 900px`), and cards under 160px high on a wide screen (`.strip.compact`). Between 160 and 200px (`.strip.tile-s`) only the climate and media variants apply, plus two fixes outside the function: the graph's average line goes, and a plug with a sparkline keeps its name on one line. The rules are written once in `cardCompact(all, compact)` and used for both. What only changes a size is a token; the rules in the function are the ones that hide, move or reorder something. They are placed after every module's own card rules, so they win by position.
 
 ## Preserved exceptions
 
 These differ on purpose; each is a modifier class with its own rules:
 
 - **Climate:** the setpoint rail on the right and the control row at the bottom (desktop); the rail only, with the bottom line at the edge (compact). Its name is one line.
-- **Media:** artwork under the card with the text on a translucent panel (`.art`, `.appart`), the transport row at the bottom, the progress line (a bar along the bottom edge in compact). In two rows under 160px the transport buttons shrink to 26px so the icon and the corner state stay, as on every other card.
+- **Media:** artwork under the card with the text on a translucent panel (`.art`, `.appart`), the transport row at the bottom, the progress line (a bar along the bottom edge in compact). On a wide screen under 160px the transport buttons shrink to 26px so the icon and the corner state stay, as on every other card.
 - **Plug with a power meter:** the sparkline on the right (hidden in compact, so phones show watts and kWh only), a footer row for the options (timer, cost, bars).
 - **Sub-content** (weather, waste, agenda): a glass column on the right; in compact the second item moves into the bottom line (`.lbl.mob`).
 - **Appliance and action rows:** buttons in a row at the bottom; the bottom line is hidden when the row takes its place.
 - **Door, window and motion cards with the graph bottom:** the same line band as the graph card, stepping between off and on over 24 hours; today's total sits on the bottom line.
-- **Graph:** a line band between the icon and the name; in compact the band shrinks and the average line goes; in two rows under 160px the period text goes too.
+- **Graph:** a line band between the icon and the name; in compact the band shrinks and the average line goes; on a wide screen the average line goes under 200px and the period text under 160px.
 - **Lists, scenes, groups, people:** their inner layout (`.s` as a list, tiles) stays; only tile height and gaps follow the tokens.
 - **Unavailable:** a centred three-row card without controls.
 - **Camera:** name and state anchored at the bottom over a gradient.

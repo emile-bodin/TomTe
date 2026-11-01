@@ -15,6 +15,7 @@ import { addPopup, canEdit, isBuiltin, TPL_ASK, groupCandidates, graphCandidates
 import { templateOf } from "./cards.js";
 import { GRAPH_HOURS } from "./graph.js";
 import { usagePopup, USAGE_PROVIDERS } from "./usage.js";
+import { costsBig, costsPopup } from "./costs.js";
 import { siblings, maintenance, vacTask, vacStatus, VAC_LABELS, BUSY } from "./vacuum.js";
 import { isMA, favTiles, searchBox, queueList, movePills } from "./music.js";
 
@@ -430,6 +431,8 @@ export function renderPopup(p, pop) {
         <ul>${[...home.lightsOn, ...home.lights.filter(e => !isOn(e.state))].map(e => li("mdi:lightbulb-outline", name(hass, e), isOn(e.state) ? `${Math.round((e.state.attributes.brightness || 255) / 2.55)}%` : t("Uit"), { on: isOn(e.state), sub: e.room.name, svg: "lamp", onclick: () => p.call("light", "toggle", { entity_id: e.id }) }))}</ul>`);
     case "usage":
       return wrap(t("Gebruik"), USAGE_PROVIDERS[pop.provider].name, t("Sessie (5 uur)") + " · " + t("Week"), usagePopup(p, pop.provider, li));
+    case "costs":
+      return wrap(t("Verbruik"), costsBig(p), t("Deze maand"), costsPopup(p));
     case "waste":
       return wrap(t("Afval"), home.waste[0] ? `${home.waste[0].label} ${wasteWhen(home.waste[0])}` : t("Geen data"), t("Ophaaldagen"), html`
         <ul>${home.waste.map((w, i) => li("mdi:trash-can-outline", html`<i class="dot" style="background:${wasteColor(w.label)}"></i>${w.label}`, wasteWhen(w), { on: i === 0, sub: w.days > 7 && w.date ? new Date(w.date).toLocaleDateString(locale(), { weekday: "long" }) : "" }))}</ul>`);
@@ -475,7 +478,7 @@ export function renderPopup(p, pop) {
         <div class="form">
           <label class="f"><span>${t("Titel")}</span><input type="text" .value=${d.title || ""} placeholder=${isHome ? (p.config.home?.greeting || t("automatisch (Goedemorgen …)")) : (p.hass.areas?.[key]?.name || r.name)} @change=${e => upd({ title: e.target.value || undefined })}></label>
           <label class="f"><span>${t("Foto")}<small>${t("pad of URL")}</small></span><input type="text" .value=${d.image || ""} placeholder=${defImage} @change=${e => upd({ image: e.target.value || undefined })}></label>
-          ${key === "home" ? nothing : html`<label class="f"><span>${t("Kaartindeling")}<small>${t("standaard één rij; op tablets en brede schermen")}</small></span><div class="seg"><button class=${(d.rows || 1) === 1 ? "on" : ""} @click=${() => upd({ rows: undefined })}>${t("Eén rij")}</button><button class=${d.rows === 2 ? "on" : ""} @click=${() => upd({ rows: 2 })}>${t("Twee rijen")}</button></div></label>`}
+          ${key === "home" ? nothing : html`<label class="f"><span>${t("Kaartindeling")}<small>${t("standaard één rij; op liggende tablets en brede schermen")}</small></span><div class="seg"><button class=${(d.rows || 1) === 1 ? "on" : ""} @click=${() => upd({ rows: undefined })}>${t("Eén rij")}</button><button class=${d.rows === 2 ? "on" : ""} @click=${() => upd({ rows: 2 })}>${t("Twee rijen")}</button></div></label>`}
         </div>
         <div class="prow" style="margin-top:18px"><span>${t("Kaarten")}</span><b>${t("{a} van {b} zichtbaar", { a: all.length - hid.size, b: all.length })}</b></div>
         <ul class="plist">${all.map((c, i) => html`<li class=${hid.has(c.key) ? "off" : ""}><ha-icon icon=${hid.has(c.key) ? "mdi:eye-off-outline" : "mdi:eye-outline"}></ha-icon><div>${c.label}<small>${c.key.includes(".") || c.key.startsWith("device:") ? c.key : ""}</small></div>

@@ -174,6 +174,9 @@ export function makeHass(onChange) {
   add("scene.night", null, "unknown", { friendly_name: "Night", icon: "mdi:power-sleep" });
   add("sensor.p1_power", null, "412", { friendly_name: "Power", unit_of_measurement: "W" });
   add("sensor.p1_energy_today", null, "6.8", { unit_of_measurement: "kWh" });
+  add("sensor.p1_import_dal", null, "19327.9", { friendly_name: "P1 Meter Energy import Dal", unit_of_measurement: "kWh" });
+  add("sensor.p1_import_normaal", null, "24269.5", { friendly_name: "P1 Meter Energy import Normaal", unit_of_measurement: "kWh" });
+  add("sensor.gas_meter", null, "8836.7", { friendly_name: "Gas meter", unit_of_measurement: "m³" });
   add("automation.night_mode", null, "unavailable", { friendly_name: "Night mode" });
 
   if (LAB) {   // long names, unavailable devices, every kind of card in its awkward states
@@ -260,6 +263,9 @@ export function makeHass(onChange) {
       if (msg.type === "history/history_during_period" && msg.entity_ids[0].startsWith("climate.")) { const id = msg.entity_ids[0], st = Date.parse(msg.start_time), now = Date.now();
         return Promise.resolve({ [id]: [0, 1.5, 3, 4.2, 6, 7.1, 9, 9.8].map((h, i) => ({ s: "heat", a: { hvac_action: i % 2 ? "idle" : "heating" }, lu: (st + h * 3600000) / 1000 })).filter(x => x.lu * 1000 < now) }); }
       if (msg.type === "history/history_during_period") { const now = Date.now(); return Promise.resolve({ [msg.entity_ids[0]]: [3, 5, 8, 13].flatMap(h => [{ s: "on", lu: (now - h * 3600000) / 1000 }, { s: "off", lu: (now - h * 3600000 + (h === 8 ? 150 : 35) * 60000) / 1000 }]) }); }
+      if (msg.type === "energy/get_prefs") return Promise.resolve({ energy_sources: [{ type: "gas", stat_energy_from: "sensor.gas_meter", number_energy_price: 1.359931 }, { type: "grid", stat_energy_from: "sensor.p1_import_dal", number_energy_price: 0.248897 }, { type: "grid", stat_energy_from: "sensor.p1_import_normaal", number_energy_price: 0.260997 }] });
+      if (msg.type === "recorder/statistics_during_period" && msg.period === "month" && msg.statistic_ids.includes("sensor.gas_meter")) return Promise.resolve(Object.fromEntries(msg.statistic_ids.map(id => [id, Array.from({ length: 12 }, (_, i) => ({ start: new Date(Date.parse(msg.start_time) + i * 2592e6).toISOString(), change: id === "sensor.gas_meter" ? 80 : 150 }))])));
+      if (msg.type === "recorder/statistics_during_period" && msg.period === "day" && msg.statistic_ids.includes("sensor.gas_meter")) { const days = Math.round((Date.now() - Date.parse(msg.start_time)) / 864e5), day = Date.parse(msg.start_time); return Promise.resolve(Object.fromEntries(msg.statistic_ids.map((id, n) => [id, Array.from({ length: days + 1 }, (_, i) => ({ start: new Date(day + i * 864e5).toISOString(), change: [1.7, 5.2, 6.0][n] }))]))); }
       if (msg.type === "recorder/statistics_during_period") { const h = new Date().getHours(); const start = new Date(); start.setHours(0, 0, 0, 0); return Promise.resolve({ [msg.statistic_ids[0]]: Array.from({ length: h + 1 }, (_, i) => ({ start: new Date(start.getTime() + i * 36e5).toISOString(), change: +(0.1 + Math.abs(Math.sin(i / 3)) * 0.9).toFixed(2) })) }); }
       if (msg.type === "frontend/get_user_data") return Promise.resolve({ value: JSON.parse(localStorage.getItem("mock:" + msg.key) || "null") });
       if (msg.type === "frontend/set_user_data") { localStorage.setItem("mock:" + msg.key, JSON.stringify(msg.value)); if (msg.key === "core") hass.userData = msg.value; return Promise.resolve({}); }

@@ -261,6 +261,15 @@ The numbers come from sensors in Home Assistant, from a usage integration or you
 
 The cards find the sensors by name (an entity id with `claude` or `chatgpt`, then `session`/`5h` or `week`). If yours are named differently, pick them under **Settings → AI usage**. Add a card with **Edit → Add card → Tomte cards → Claude Code** (or **ChatGPT**); an entry only shows when its sensors exist. Name and icon can be changed like on any card (⋯ → Card settings).
 
+## Verbruik
+
+What the house uses and costs, for electricity and gas. Add it through **Bewerken → Kaart toevoegen**; it sits next to the Energie card and does not replace it.
+
+- **The card** shows today and this month per column, with the cost, and the current power in the corner. On a phone and on low cards only this month's use remains.
+- **The popup** has every tariff with its price, for today, this month and last month, then a year of use against your instalments. Enter the instalment and the fixed costs under **Settings → Energy**.
+
+The meters and prices come from the settings of Home Assistant's **Energy dashboard**, the use from the recorder's statistics of those meters. The cost is use times the price set today, without standing and grid charges, so earlier months move along when you change a price. The numbers run up to an hour behind, like the dashboard. The current power is the **Vermogen** sensor from the panel's own settings.
+
 ## Light scenes
 
 <div class="grid2" markdown>
