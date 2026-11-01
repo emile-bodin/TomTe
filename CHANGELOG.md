@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **Fix: the instalment check in the Verbruik popup follows your contract year.** It compared the last 12 whole months, which do not match the year your supplier settles. Enter the contract date under Settings → Energy: the popup now shows that year with its dates, the use so far plus the rest estimated from the same days last year, against 12 instalments. It gives no verdict until the date is filled in.
+
 - **Fix: deploying from Windows took over a minute.** The smoke test loaded jsdom over the network share, file by file. With `{ "tools": "<local folder>" }` in `deploy.local.json`, jsdom and the esbuild binary now load from a local disk; without it nothing changes, so the host works as before.
 
 - **Fix: build warnings about duplicate translations.** Seven English translations were listed twice with the same text, so every build warned about them. Each is now listed once; the panel's texts stay the same.
