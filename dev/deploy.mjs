@@ -7,6 +7,7 @@
 // .deploy-backups/<variant>/ and install the loader.js that build.mjs writes next to the bundle: /local is cached for 31 days, the loader
 // imports the bundle under its current ETag, so a reload in the browser always gets the new build.
 // Other targets: TOMTE_TARGET, or { "dev": "...", "prod": "..." } in deploy.local.json (git-ignored).
+// Working over a network share: { "tools": "<local folder>" } there loads jsdom and the esbuild binary from a local disk.
 // Roll back with `npm run rollback:dev` / `npm run rollback:prod`.
 import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -19,6 +20,7 @@ const run = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
 const out = cmd => execSync(cmd, { encoding: "utf8" }).trim();
 
 const local = existsSync("deploy.local.json") ? JSON.parse(readFileSync("deploy.local.json", "utf8")) : {};
+if (local.tools) process.env.ESBUILD_BINARY_PATH ||= join(local.tools, "node_modules/@esbuild/win32-x64/esbuild.exe");
 const DEFAULT = { dev: "/config/www/tomte-dev", prod: "/config/www/tomte" };
 const target = process.env.TOMTE_TARGET || local[variant] || DEFAULT[variant];
 if (!existsSync(join(target, ".."))) { console.error(`Target ${target} is not reachable from here. Set TOMTE_TARGET or deploy.local.json.`); process.exit(1); }

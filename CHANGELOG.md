@@ -4,6 +4,10 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **Fix: deploying from Windows took over a minute.** The smoke test loaded jsdom over the network share, file by file. With `{ "tools": "<local folder>" }` in `deploy.local.json`, jsdom and the esbuild binary now load from a local disk; without it nothing changes, so the host works as before.
+
+- **Fix: build warnings about duplicate translations.** Seven English translations were listed twice with the same text, so every build warned about them. Each is now listed once; the panel's texts stay the same.
+
 ## 1.5.0 · 2026-11-01
 
 - **New: a player bar on the Muziek page, and a calmer layout.** The page could pick music for a speaker but not steer it, and its blocks had no order. A slim bar at the top of the left column now steers the chosen speaker (artwork, title, previous / play-pause / next, volume), with small round buttons in the style of the page's filter pills; on a phone it takes two rows. The pills show which speakers play (pulsing dot) or are paused (ring), playing ones first. The page picks the speaker that started playing last, and keeps the one you tap, so it does not jump while you choose music. Under the bar the library (one search field over the favourites, the hits while you search) fills the wide left column, the queue and moving the music sit in a narrow column on the right; the separate "Speelt nu" block is gone, the pills say it.

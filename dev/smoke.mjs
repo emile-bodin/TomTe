@@ -1,7 +1,12 @@
 // Render smoke test: loads a built bundle into jsdom, renders a room and the settings page against a made-up home and
 // walks the settings layers (household + personal). Exits 1 on any failure. `node dev/smoke.mjs dist-dev/tomte-dev.js tomte-panel-dev`
-import { JSDOM } from "jsdom";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+
+// over a network share jsdom alone takes a minute to load: deploy.local.json can point at a local copy (see deploy.mjs)
+const local = existsSync("deploy.local.json") ? JSON.parse(readFileSync("deploy.local.json", "utf8")) : {};
+const { JSDOM } = local.tools ? createRequire(join(local.tools, "tools.js"))("jsdom") : await import("jsdom");
 
 const [file = "dist-dev/tomte-dev.js", tag = "tomte-panel-dev"] = process.argv.slice(2);
 const dom = new JSDOM("<!doctype html><body></body>", { url: "http://localhost/tomte/", runScripts: "outside-only", pretendToBeVisual: true });
