@@ -4,6 +4,16 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.5.0 · 2026-11-01
+
+- **New: a player bar on the Muziek page, and a calmer layout.** The page could pick music for a speaker but not steer it, and its blocks had no order. A slim bar at the top of the left column now steers the chosen speaker (artwork, title, previous / play-pause / next, volume), with small round buttons in the style of the page's filter pills; on a phone it takes two rows. The pills show which speakers play (pulsing dot) or are paused (ring), playing ones first. The page picks the speaker that started playing last, and keeps the one you tap, so it does not jump while you choose music. Under the bar the library (one search field over the favourites, the hits while you search) fills the wide left column, the queue and moving the music sit in a narrow column on the right; the separate "Speelt nu" block is gone, the pills say it.
+
+- **Fix: Music Assistant speakers are named after their device.** They took the name of their room, so four speakers in the living room all read "Huiskamer" on the Muziek page, in the speaker popup and in the announcement settings. They now show the device's name (the one you gave it in Home Assistant, else its own).
+
+- **Fix: room pages jumped between one and two rows.** On a wide screen one row used large cards near the bottom and two rows used cards fitted to the space under the title (120–180px, compact under 160px), so going from room to room the cards changed size and the row moved. Every page now uses one card size per screen (at most 180px high, larger on big screens, compact only when the screen is too low for that), the home page included. A room always keeps room for two rows with its title above it, so the title stays in the same place; a room with one row puts it right under the title. On a portrait tablet two rows now falls back to the three-column grid, which already shows every card.
+
+- **New: a Verbruik card.** The Energie card only knows the power and one day's kWh, so what the house uses and costs had no place on the panel. This card reads the meters and prices from Home Assistant's Energy dashboard: electricity and gas for today and this month with their cost, the power now in the corner. A phone shows this month's use only; the popup has every tariff and price for today, this month and last month, and a year of use against your instalments (two new fields under Settings → Energy). Add it through Bewerken → Kaart toevoegen.
+
 ## 1.4.0 · 2026-10-30
 
 - **New: Music Assistant.** Speakers that Music Assistant runs were plain media players in Tomte (play, pause, volume). Their popup now has four tabs: favourites (tap to play), search, the queue (now and next) and moving the music to another speaker. A new **Muziek** page under Meer has the same for all speakers on one screen, plus what plays where; it only shows when Music Assistant is installed. Everything goes through Home Assistant's own `music_assistant` services. An administrator's panel stores the integration's id in the household settings, so search and favourites also work for other users.
