@@ -4,6 +4,11 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.7.1 · 2026-11-02
+
+- **Fix: washers and dryers on the LocalThings integration show their cycle.** LocalThings reports `idle` / `active` / `pause` and names its sensors differently, so a running machine looked idle, without phase, progress or finish time. Tomte now reads those states and sensors, finds the month totals for a device called "Samsung Washer" or "Samsung Dryer", and hides Stop while Smart Control is off at the machine, the same way it already handled remote control for the power button. When the same machine is also still on SmartThings, the LocalThings card replaces the SmartThings one
+- **Fix: the appliance card no longer repeats the progress on its bottom line.** It already stands in the status at the top, and a stopped machine showed "0%". The bottom line now holds the programme, power and month totals, and the popup hides progress while the machine is idle
+
 ## 1.7.0 · 2026-11-02
 
 - **New: a Heating page under More.** It only appears when the Home Assistant rules behind `sensor.verwarming_doel` exist. One page shows what the rules do now and why, today's schedule, the main switch (turning it on takes a second tap) and the automations; graphs of room, target, Nest setpoint and boiler, outside temperature and sun, gas per day and gas per degree day against the old schedule; every temperature, time and weather limit to change in place; and a plain explanation with the current values. It is laid out like the Sensors page, with filter pills and blocks of rows, and every block has a small question mark that opens a popup explaining what the block shows and does
