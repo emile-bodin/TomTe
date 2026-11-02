@@ -46,20 +46,22 @@ function powerState(hass, a) {
 }
 /* Home Connect operation states: inactive, ready, delayedstart, run, pause, actionrequired, finished, error, aborting
    (older versions report "BSH.Common.EnumType.OperationState.Run") */
-const JOB_PHASES = { wash: "Wassen", ai_wash: "Wassen", pre_wash: "Voorwas", air_wash: "Luchtwas", rinse: "Spoelen", ai_rinse: "Spoelen", spin: "Centrifugeren", ai_spin: "Centrifugeren", drying: "Drogen", ai_drying: "Drogen", cooling: "Afkoelen", wrinkle_prevent: "Kreukbescherming", weight_sensing: "Gewicht meten", delay_wash: "Uitgesteld", refreshing: "Opfrissen", sanitizing: "Hygiëne", dehumidifying: "Ontvochtigen", continuous_dehumidifying: "Ontvochtigen", internal_care: "Onderhoud", finish: "Klaar", finished: "Klaar", freeze_protection: "Vorstbeveiliging", thawing_frozen_inside: "Ontdooien" };
+const JOB_PHASES = { wash: "Wassen", ai_wash: "Wassen", pre_wash: "Voorwas", air_wash: "Luchtwas", rinse: "Spoelen", ai_rinse: "Spoelen", spin: "Centrifugeren", ai_spin: "Centrifugeren", drying: "Drogen", ai_drying: "Drogen", cooling: "Afkoelen", wrinkle_prevent: "Kreukbescherming", weight_sensing: "Gewicht meten", delay_wash: "Uitgesteld", refreshing: "Opfrissen", sanitizing: "Hygiëne", dehumidifying: "Ontvochtigen", continuous_dehumidifying: "Ontvochtigen", internal_care: "Onderhoud", finish: "Klaar", finished: "Klaar", freeze_protection: "Vorstbeveiliging", thawing_frozen_inside: "Ontdooien",
+  airwashing: "Luchtwas", delaywash: "Uitgesteld", dryingwithdooropen: "Drogen", predrain: "Afpompen", prewash: "Voorwas", steaming: "Stomen", weightsensing: "Gewicht meten" };   // LocalThings
 function opState(hass, a) {
   const os = hass.states[a.op.id], sw = a.switch ? hass.states[a.switch.id] : null, power = a.power ? num(hass.states[a.power.id]?.state) : null;
-  const op = String(os?.state ?? "").split(".").pop().toLowerCase();
+  const raw = String(os?.state ?? "").split(".").pop().toLowerCase(), op = raw === "active" ? "run" : raw;   // LocalThings: idle, active, pause
   const pct = a.progress ? num(hass.states[a.progress.id]?.state) : null;
   // an end time only counts while a program runs (SmartThings keeps the last one after the cycle)
   const fs = a.finish ? hass.states[a.finish.id] : null, UNIT = { h: 3600000, min: 60000, s: 1000 };
   // a finish time is a timestamp (Home Connect, SmartThings) or, on Home Connect Local, the time left as a duration: counted from when it was last updated
   const fin = fs && !unavailable(fs) ? (fs.attributes?.device_class === "duration" ? new Date(new Date(fs.last_changed).getTime() + num(fs.state) * (UNIT[fs.attributes.unit_of_measurement] || 1000)) : new Date(fs.state)) : null, end = fin && !isNaN(fin) && fin > Date.now() && /^(run|pause|delayedstart|aborting)$/.test(op) ? fin : null;
-  const jb = a.job ? hass.states[a.job.id]?.state : null, job = jb && !/^(none|unknown|unavailable)$/.test(jb) ? t(JOB_PHASES[jb] || jb.replace(/_/g, " ")) : null;   // the phase of the cycle: washing, rinsing, spinning, …
+  const jb = a.job ? hass.states[a.job.id]?.state : null, job = jb && !/^(none|idle|unknown|unavailable)$/.test(jb) ? t(JOB_PHASES[jb] || jb.replace(/_/g, " ")) : null;   // the phase of the cycle: washing, rinsing, spinning, …
   const base = { power, progress: pct, end, job };
   if (sw?.state === "off" || op === "inactive" || op === "off") return { ...base, st: "off", label: t("Uit") };
   switch (op) {
     case "run": return { ...base, st: "running", label: job ? (pct != null ? `${job} · ${Math.round(pct)}%` : job) : pct != null ? t("Bezig · {n}%", { n: Math.round(pct) }) : t("Bezig…") };
+    case "idle":     // LocalThings
     case "stop": {   // SmartThings: stopped, or switched off at the machine
       const pw = a.device && Object.keys(hass.entities || {}).find(k => hass.entities[k].device_id === a.device && /^binary_sensor\..*_power$/.test(k));
       return hass.states[pw]?.state === "off" ? { ...base, st: "off", label: t("Uit") } : { ...base, st: "idle", label: t("Gestopt") };
@@ -83,12 +85,12 @@ export const applianceEnd = st => {
 /** a washer or dryer with remote control switched off at the machine cannot be switched on from here */
 export const noRemote = (hass, a) => {
   if (!a.device) return false;
-  const f = Object.keys(hass.entities || {}).find(k => hass.entities[k].device_id === a.device && /^binary_sensor\..*_remote_control$/.test(k));
+  const f = Object.keys(hass.entities || {}).find(k => hass.entities[k].device_id === a.device && /^binary_sensor\..*_(remote|smart)_control$/.test(k));
   return !!f && hass.states[f]?.state === "off";
 };
 /** the month totals the household keeps per appliance (sensor.<first word of the device name>_energie_maand / _kosten_maand / _cycli_maand) */
 export const applianceMonth = (hass, a) => {
-  const d = hass.devices?.[a.device], nm = String(d?.name_by_user || d?.name || "").toLowerCase(), k = /vaat|dish/.test(nm) ? "vaatwasser" : nm.split(/\s+/)[0];   // the month sensors are named after the Dutch name, also when the device is called "SIEMENS Dishwasher"
+  const d = hass.devices?.[a.device], nm = String(d?.name_by_user || d?.name || "").toLowerCase(), k = /vaat|dish/.test(nm) ? "vaatwasser" : /washer/.test(nm) ? "wasmachine" : /dryer/.test(nm) ? "droger" : nm.split(/\s+/)[0];   // the month sensors are named after the Dutch name, also when the device is called "SIEMENS Dishwasher" or "Samsung Washer"
   if (!k) return null;
   const en = num(hass.states[`sensor.${k}_energie_maand`]?.state), eur = num(hass.states[`sensor.${k}_kosten_maand`]?.state), cy = num(hass.states[`sensor.${k}_cycli_maand`]?.state);
   if (en == null && cy == null) return null;

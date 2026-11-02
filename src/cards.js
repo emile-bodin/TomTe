@@ -443,9 +443,9 @@ export function applianceCard(p, a) {
   const opS = a.op ? p.hass.states[a.op.id] : null, prog = a.program ? p.hass.states[a.program.id] : null;
   const line = a.op ? applianceEnd(st) || (opS ? sinceText(opS.last_changed) : "") : a.switch ? html`${isOn(a.switch.state) ? t("Stekker aan") : t("Stekker uit")}${dot()}${sinceText(a.switch.state?.last_changed)}` : "";
   const progName = prog && !unavailable(prog) ? String(p.hass.formatEntityState?.(prog) ?? prog.state).split(".").pop().split("_program_").pop().replace(/_/g, " ").replace(/([a-z])([A-Z0-9])/g, "$1 $2") : "";   // Home Connect enums: Dishcare.Dishwasher.Program.Auto2 or dishcare_dishwasher_program_auto_2 -> Auto 2
-  const foot = [progName, st.progress != null ? `${Math.round(st.progress)}%` : "", st.power > 0 ? `${Math.round(st.power)} W` : "", applianceMonth(p.hass, a)?.txt || "", a.door && ["open", "on"].includes(p.hass.states[a.door.id]?.state) ? t("Deur open") : ""].filter(Boolean);
+  const foot = [progName, st.power > 0 ? `${Math.round(st.power)} W` : "", applianceMonth(p.hass, a)?.txt || "", a.door && ["open", "on"].includes(p.hass.states[a.door.id]?.state) ? t("Deur open") : ""].filter(Boolean);
   const acts = [];
-  if (a.stop && !a.plain && ["running", "waiting"].includes(st.st)) acts.push({ icon: "mdi:stop", label: t("Stop"), run: () => p.call("button", "press", { entity_id: a.stop.id }) });
+  if (a.stop && !a.plain && ["running", "waiting"].includes(st.st) && !noRemote(p.hass, a)) acts.push({ icon: "mdi:stop", label: t("Stop"), run: () => p.call("button", "press", { entity_id: a.stop.id }) });
   if (a.switch && a.op && !unavailable(a.switch.state) && !noRemote(p.hass, a)) acts.push({ icon: "mdi:power", label: isOn(a.switch.state) ? t("Uit") : t("Aan"), on: isOn(a.switch.state), run: () => p.call("switch", "toggle", { entity_id: a.switch.id }) });
   if (!a.op && a.power) return plugCard(p, a, st, title, cfg, acts);
   return html`<div class=${classMap({ card: true, appl: acts.length > 0, on: APPLIANCE_ACTIVE.includes(st.st), running: st.st === "running", unavailable: st.st === "unknown" })}
@@ -470,7 +470,7 @@ export function applianceCard2(p, a) {
   const opS = p.hass.states[a.op.id], prog = a.program ? p.hass.states[a.program.id] : null, door = a.door ? p.hass.states[a.door.id] : null;
   const t0 = opS ? new Date(opS.last_changed).getTime() : null, calc = live && st.end && t0 && Date.now() - t0 > 120000 ? Math.min(1, Math.max(0, (Date.now() - t0) / (st.end - t0))) * 100 : null, pct = st.progress ?? calc;
   const progName = prog && !unavailable(prog) ? String(p.hass.formatEntityState?.(prog) ?? prog.state).split(".").pop().split("_program_").pop().replace(/_/g, " ").replace(/([a-z])([A-Z0-9])/g, "$1 $2") : "";
-  const month = live ? null : applianceMonth(p.hass, a)?.txt;
+  const month = live && /vaat|dish/i.test(title) ? null : applianceMonth(p.hass, a)?.txt;   // a washer or dryer keeps its month totals while it runs
   const selId = Object.keys(p.hass.entities || {}).find(k => k.startsWith("select.") && p.hass.entities[k].device_id === a.device && (p.hass.states[k]?.attributes?.options || []).includes("stop")), sel = selId ? p.hass.states[selId] : null;
   const pick = option => () => p.call("select", "select_option", { entity_id: selId, option });
   const dw = /vaat|dish/i.test(title) ? dishHelper(p.hass) : null, flow = dw && !live && ["idle", "done", "unknown"].includes(st.st) ? dw.state : null, doorOpen = ["open", "on"].includes(door?.state);
@@ -479,7 +479,8 @@ export function applianceCard2(p, a) {
   const startBtn = flow === "vuil" && !doorOpen ? Object.keys(p.hass.entities || {}).find(k => k.startsWith("button.") && p.hass.entities[k].device_id === a.device && /_start$/.test(k) && !unavailable(p.hass.states[k])) : null;
   const foot = [progName, live && st.power > 0 ? `${Math.round(st.power)} W` : "", month, doorOpen && !(dw && !live) ? t("Deur open") : ""].filter(Boolean);
   const acts = [];
-  if (live && a.stop && !a.plain) acts.push({ icon: "mdi:stop", label: t("Stop"), run: () => p.call("button", "press", { entity_id: a.stop.id }) });
+  if (live && a.stop && !a.plain && noRemote(p.hass, a)) { /* Smart Control is off at the machine: Stop would not work */ }
+  else if (live && a.stop && !a.plain) acts.push({ icon: "mdi:stop", label: t("Stop"), run: () => p.call("button", "press", { entity_id: a.stop.id }) });
   else if (live && sel) {
     acts.push({ icon: "mdi:stop", label: t("Stop"), run: pick("stop") });
     if (sel.attributes.options.includes("pause")) acts.push(sel.state === "pause" ? { icon: "mdi:play", label: t("Hervatten"), run: pick("run") } : { icon: "mdi:pause", label: t("Pauze"), run: pick("pause") });

@@ -60,7 +60,7 @@ A switch toggles on tap. A switch whose device also reports **power** becomes a 
 
 Washing machines, dishwashers and dryers are recognised in two ways:
 
-- a device that reports its own status (Home Connect, Home Connect Local, Miele, LG ThinQ …): the card shows the programme, progress, finish time and door, with a **Stop** button;
+- a device that reports its own status (Home Connect, Home Connect Local, Miele, LG ThinQ, SmartThings, LocalThings …): the card shows the programme, progress, finish time and door, with a **Stop** button;
 - a smart plug with a power meter: *busy* above a threshold (5 W by default, adjustable per card), *done* when it drops, *standby* otherwise.
 
 <a id="dishwasher-card"></a>

@@ -36,7 +36,7 @@ function wasteDate(s) {
   }
   return null;
 }
-const isOpState = e => e.reg.translation_key === "operation_state" || /_operation_state$/.test(e.id) || /^sensor\..*_machine_state$/.test(e.id);   // Home Connect, SmartThings
+const isOpState = e => e.reg.translation_key === "operation_state" || /_operation_state$/.test(e.id) || /^sensor\..*_machine_state$/.test(e.id);   // Home Connect, SmartThings, LocalThings
 
 function classify(list, config = {}, hass = {}) {
   const r = { lights: [], switches: [], strips: [], media: [], covers: [], climate: [], fans: [], locks: [], vacuums: [], humidifiers: [], scenes: [], cameras: [], appliances: [], power: [], opstate: [], doors: [], windows: [], motion: [], temp: [], hum: [], battery: [], other: [], values: [], all: list };
@@ -93,9 +93,9 @@ function classify(list, config = {}, hass = {}) {
     const own = list.filter(e => e.reg.device_id === dev), pick = (tk, re) => own.find(e => e.reg.translation_key === tk || re.test(e.id)) || null;
     const sws = r.switches.filter(s => s.reg.device_id === dev), sw = sws.find(s => s.reg.translation_key === "power" || /_power$/.test(s.id)) || null;
     if (config.cards?.[(sw || op).id]?.noAppliance) continue;
-    const more = { op, progress: pick("program_progress", /_program(me)?_progress$/), finish: pick("program_finish_time", /_program(me)?_finish_time$|^sensor\..*_(completion_time|remaining_programme_running_time|remaining_program_time)$/), job: pick("job_state", /^sensor\..*_(job_state|program_phase)$/), door: pick("door", /^(binary_)?sensor\..*_door$/),
-      program: own.find(e => /^select\..*_selected_program$/.test(e.id)) || pick("active_program", /^(select|sensor)\..*_active_program(me)?$|^select\..*_programs$/), stop: pick("stop_program", /^button\..*_(stop(_program(me)?)?|abort)$/), extra: sws.filter(s => s !== sw),
-      flags: r.other.filter(e => e.reg.device_id === dev) };              // e.g. "remote start": shown in the popup
+    const more = { op, progress: pick("program_progress", /_program(me)?_progress$|^sensor\..*_progress_percent$/), finish: own.find(e => /^sensor\..*_estimated_finish$/.test(e.id)) || pick("program_finish_time", /_program(me)?_finish_time$|^sensor\..*_(completion_time|remaining_programme_running_time|remaining_program_time)$/), job: pick("job_state", /^sensor\..*_(job_state|program_phase)$/) || own.find(e => /^sensor\..*_progress$/.test(e.id) && e.state?.attributes?.device_class === "enum") || null, door: pick("door", /^(binary_)?sensor\..*_door$/),
+      program: own.find(e => /^select\..*_selected_program$/.test(e.id)) || pick("active_program", /^(select|sensor)\..*_active_program(me)?$|^select\..*_programs$/), stop: pick("stop_program", /^button\..*_(stop(_program(me)?)?|abort)$/), extra: sws.filter(s => s !== sw && !/_wrinkle_prevent$/.test(s.id)),
+      flags: r.other.filter(e => e.reg.device_id === dev && !/_(running|wrinkle_prevent_active)$/.test(e.id)) };   // e.g. "remote start": shown in the popup; LocalThings details that repeat the status stay out
     const prev = r.appliances.find(a => a.device === dev);
     if (prev) Object.assign(prev, more);                                   // a smart plug with power meter on the same device: keep both
     else r.appliances.push({ id: "device:" + dev, device: dev, key: (sw || op).id, power: null, switch: sw, ...more });
