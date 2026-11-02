@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.7.2 · 2026-11-02
+
 - **Fix: the settings page responds quickly on a tablet.** Every change built all sixteen tabs again, with a sorted list of all entities for each dropdown, and so did every sensor changing anywhere in the house. Now only the open tab is built, the sorted lists are reused, typing no longer recalculates the rooms, and sensor changes redraw the page at most every 5 seconds. The doorbell popup still opens at once
 
 ## 1.7.1 · 2026-11-02

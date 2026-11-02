@@ -1,6 +1,6 @@
 {
   "name": "tomte",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "private": true,
   "type": "module",
   "description": "Tomte: a room-first Home Assistant panel, based on HaCasa Nova and the Homio design.",
