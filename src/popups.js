@@ -16,6 +16,7 @@ import { templateOf } from "./cards.js";
 import { GRAPH_HOURS } from "./graph.js";
 import { usagePopup, USAGE_PROVIDERS } from "./usage.js";
 import { costsBig, costsPopup } from "./costs.js";
+import { heatInfo, heatInfoTitle } from "./heating.js";
 import { siblings, maintenance, vacTask, vacStatus, VAC_LABELS, BUSY } from "./vacuum.js";
 import { isMA, favTiles, searchBox, queueList, movePills } from "./music.js";
 import "./peoplemap.js";
@@ -435,6 +436,8 @@ export function renderPopup(p, pop) {
       return wrap(t("Gebruik"), USAGE_PROVIDERS[pop.provider].name, t("Sessie (5 uur)") + " · " + t("Week"), usagePopup(p, pop.provider, li));
     case "costs":
       return wrap(t("Verbruik"), costsBig(p), t("Deze maand"), costsPopup(p));
+    case "heatinfo":
+      return wrap(t("Verwarming"), heatInfoTitle(pop.key), t("Uitleg bij deze kaart"), heatInfo(pop.key));
     case "waste":
       return wrap(t("Afval"), home.waste[0] ? `${home.waste[0].label} ${wasteWhen(home.waste[0])}` : t("Geen data"), t("Ophaaldagen"), html`
         <ul>${home.waste.map((w, i) => li("mdi:trash-can-outline", html`<i class="dot" style="background:${wasteColor(w.label)}"></i>${w.label}`, wasteWhen(w), { on: i === 0, sub: w.days > 7 && w.date ? new Date(w.date).toLocaleDateString(locale(), { weekday: "long" }) : "" }))}</ul>`);

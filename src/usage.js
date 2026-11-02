@@ -2,7 +2,7 @@
 // (percentages with the moment each window resets). Added to a page through Bewerken → Kaart toevoegen → Tomte cards.
 import { html, nothing } from "lit";
 import { classMap } from "lit/directives/class-map.js";
-import { t } from "./i18n.js";
+import { t, locale } from "./i18n.js";
 import { num, unavailable, relTime } from "./util.js";
 import { pressDir, cardCfg, icoFor, ua } from "./cards.js";
 import { loadGraph, line } from "./graph.js";
@@ -87,7 +87,7 @@ export function usagePopup(p, prov, li) {
   };
   return html`
     <ul>${wins.flatMap(w => [
-      li("mdi:timer-sand", w.label, pctText(w.pct), { on: w.level === "crit", sub: w.left != null ? t("reset over {t}", { t: span(w.left) }) + " · " + w.reset.toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "", onclick: () => p.moreInfo(w.id) }),
+      li("mdi:timer-sand", w.label, pctText(w.pct), { on: w.level === "crit", sub: w.left != null ? t("reset over {t}", { t: span(w.left) }) + " · " + w.reset.toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "", onclick: () => p.moreInfo(w.id) }),
       w.pace ? li("mdi:speedometer", t("Tempo"), w.pace === "over" ? t("boven schema") : t("binnen schema"), { on: w.pace === "over", sub: t("{u} % gebruikt · {e} % van het venster verstreken", { u: Math.round(w.pct), e: Math.round(w.elapsed * 100) }) }) : null,
     ]).filter(Boolean)}
     ${wins.some(w => w.last) ? li("mdi:update", t("Laatst bijgewerkt"), relTime(wins.find(w => w.last).last.toISOString()), { on: wins.some(w => w.stale) }) : nothing}</ul>

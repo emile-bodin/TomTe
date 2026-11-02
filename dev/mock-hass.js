@@ -138,6 +138,31 @@ export function makeHass(onChange) {
   // whole-home
   for (const [p, st] of [["alex", "home"], ["sam", "home"], ["robin", "home"], ["jamie", "not_home"], ["charlie", "not_home"]])
     add(`person.${p}`, null, st, { friendly_name: p.split("_")[0].replace(/^\w/, c => c.toUpperCase()) }, { changed: ago(st === "home" ? 900 : 130) });
+  // the household's heating rules, for the Heating page
+  add("climate.nest", null, "heat", { friendly_name: "Nest", temperature: 18, current_temperature: 18.8, hvac_action: "idle", hvac_modes: ["heat", "off"], preset_modes: ["none", "eco"], preset_mode: "none" });
+  add("input_boolean.verwarming_brain_regelt", null, "off");
+  add("input_boolean.verwarming_opwarmen", null, "off");
+  add("input_boolean.vakantie_modus", null, "off");
+  add("timer.verwarming_hand", null, "idle");
+  for (const [k, v, min, max, step, unit] of [["dag", 18.5, 10, 25, .5, "°C"], ["thuisdag", 20, 10, 25, .5, "°C"], ["avond", 19.5, 10, 25, .5, "°C"], ["avond_desiree", 20, 10, 25, .5, "°C"], ["nacht", 16, 10, 25, .5, "°C"], ["opwarmsnelheid", .6, .1, 3, .05, "°C/u"], ["warmteverlies", .021, .005, .2, .001, "°C/u per °C"], ["koud_grens", 3, -15, 15, .5, "°C"], ["zacht_grens", 14, 5, 25, .5, "°C"], ["zon_grens", 300, 50, 1000, 10, "W/m²"]])
+    add(`input_number.verwarming_${k}`, null, String(v), { min, max, step, unit_of_measurement: unit });
+  for (const [k, v] of [["warm_werkdag", "06:30:00"], ["warm_weekend", "09:30:00"], ["start_thuisdag", "08:00:00"], ["avondstart", "16:00:00"], ["avondstop_vroegst", "20:30:00"], ["avondstop_laatst", "21:30:00"]]) add(`input_datetime.verwarming_${k}`, null, v, { has_time: true, has_date: false });
+  add("sensor.verwarming_doel", null, "18.5", { unit_of_measurement: "°C" });
+  add("sensor.verwarming_blok", null, "dag");
+  add("sensor.verwarming_weer", null, "geen");
+  add("sensor.verwarming_reden", null, "dag");
+  add("sensor.verwarming_avondstop", null, "20:30");
+  add("sensor.verwarming_buiten_gemiddeld", null, "10.3", { unit_of_measurement: "°C" });
+  add("sensor.verwarming_zon_gemiddeld", null, "27", { unit_of_measurement: "W/m²" });
+  add("sensor.nest_temperature", null, "18.8", { unit_of_measurement: "°C" });
+  add("sensor.nest_setpoint", null, "18", { unit_of_measurement: "°C" });
+  add("sensor.nest_hvac_action", null, "off");
+  add("sensor.weer_home_temperature", null, "10.3", { unit_of_measurement: "°C" });
+  add("sensor.weer_home_solar_radiation", null, "27", { unit_of_measurement: "W/m²" });
+  add("sensor.heat_active_today", null, "1.3", { unit_of_measurement: "h" });
+  add("sensor.gas_usuage_daiily", null, "1.8", { unit_of_measurement: "m³" });
+  add("sensor.gas_meter_gas", null, "8837.1", { unit_of_measurement: "m³" });
+  for (const [k, ago_] of [["regelaar", null], ["handbediening", null], ["opwarmen", 2], ["storing", null]]) add(`automation.verwarming_${k}`, null, "on", { friendly_name: `Verwarming - ${k}`, last_triggered: ago_ ? new Date(Date.now() - ago_ * 60000).toISOString() : null });
   add("alarm_control_panel.alarmo", null, "disarmed", { friendly_name: "Alarmo", changed_by: "Alex", code_format: "number", code_arm_required: false }, { changed: ago(640) });
   add("fan.ceiling_fan", "bedroom", "on", { friendly_name: "Ceiling fan", percentage: 40, preset_modes: ["low", "high", "auto"], oscillating: false });
   add("lock.front_door", "hallway", "locked", { friendly_name: "Front door lock", changed_by: "Sam" }, { changed: ago(130) });
@@ -258,6 +283,10 @@ export function makeHass(onChange) {
           return Promise.resolve({ response: { [id]: { queue_id: "q-speaker", active: true, name: "Speaker", items: 12, current_index: 3, current_item: { name: "Charli xcx - B2b", media_item: it("track", 9, "B2b", by("Charli xcx")) }, next_item: { name: "Charli xcx - 360", media_item: it("track", 10, "360", by("Charli xcx")) } } } }); }
       }
       if (msg.type === "call_service" && msg.domain === "calendar") { const t = new Date(); return Promise.resolve({ response: { "calendar.family": { events: [{ summary: "Swimming lesson", start: new Date(t.getTime() + 2 * 3600000).toISOString(), end: new Date(t.getTime() + 3 * 3600000).toISOString() }, { summary: "Grandma's birthday", start: new Date(t.getTime() + 86400000).toISOString().slice(0, 10), end: new Date(t.getTime() + 2 * 86400000).toISOString().slice(0, 10) }] } } }); }
+      if (msg.type === "history/history_during_period" && msg.entity_ids.includes("timer.verwarming_hand")) { const now = Date.now(), at = h => (now - h * 3600000) / 1000; return Promise.resolve({ "sensor.nest_hvac_action": [100, 99, 76, 75, 52, 51, 28, 27, 4, 3].map((h, i) => ({ s: i % 2 ? "off" : "on", lu: at(h) })), "timer.verwarming_hand": [{ s: "active", lu: at(30) }, { s: "idle", lu: at(28) }, { s: "active", lu: at(6) }, { s: "idle", lu: at(4) }] }); }
+      if (msg.type === "history/history_during_period" && msg.entity_ids.includes("sensor.verwarming_doel")) { const now = Date.now(), hrs = (now - Date.parse(msg.start_time)) / 3600000, at = h => (now - h * 3600000) / 1000; const curve = (fn, step = .5) => Array.from({ length: Math.round(hrs / step) + 1 }, (_, i) => { const h = hrs - i * step; return { s: String(+fn(new Date(now - h * 3600000).getHours() + new Date(now - h * 3600000).getMinutes() / 60).toFixed(2)), lu: at(h) }; }); const goal = t => t < 6.5 || t >= 20.5 ? 16 : t < 16 ? 18.5 : 19.5, set = t => t < 6 || t >= 22 ? 16 : t < 8.5 ? 19 : t < 16 ? 18 : 19.5;
+        return Promise.resolve({ "sensor.nest_temperature": curve(t => 18.7 + Math.max(0, Math.sin((t - 6) / 16 * Math.PI)) * 1.1), "sensor.verwarming_doel": curve(goal, .25), "sensor.nest_setpoint": curve(set, .25), "sensor.weer_home_temperature": curve(t => 8 + Math.sin((t - 8) / 24 * 2 * Math.PI) * 3), "sensor.weer_home_solar_radiation": curve(t => Math.max(0, Math.sin((t - 7.5) / 10 * Math.PI)) * 260) }); }
+      if (msg.type === "recorder/statistics_during_period" && msg.statistic_ids.includes("sensor.gas_meter_gas")) { const day = new Date(msg.start_time); day.setHours(0, 0, 0, 0); const n = Math.round((Date.now() - day) / 864e5); const rows = fn => Array.from({ length: n + 1 }, (_, i) => ({ start: day.getTime() + i * 864e5, ...fn(i) })); return Promise.resolve({ "sensor.gas_meter_gas": rows(i => ({ change: +(2 + Math.abs(Math.sin(i * 1.3)) * 2).toFixed(2) })), "sensor.weer_home_temperature": rows(i => ({ mean: +(9 + Math.sin(i * 1.3) * 3).toFixed(1) })) }); }
       if (msg.type === "history/history_during_period" && msg.entity_ids[0].startsWith("sensor.")) { const now = Date.now(), hrs = (now - Date.parse(msg.start_time)) / 3600000, id = msg.entity_ids[0], base = parseFloat(hass.states[id]?.state) || 20;
         return Promise.resolve({ [id]: Array.from({ length: Math.round(hrs * 4) + 1 }, (_, i) => { const h = i / 4 - hrs; return { s: String(base + Math.sin((h + 9) / 3.8) * 1.3 + Math.sin(h * 1.7) * .25 - .4), lu: (now + h * 3600000) / 1000 }; }) }); }
       if (msg.type === "history/history_during_period" && msg.entity_ids[0].startsWith("climate.")) { const id = msg.entity_ids[0], st = Date.parse(msg.start_time), now = Date.now();

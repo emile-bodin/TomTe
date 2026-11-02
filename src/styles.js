@@ -10,6 +10,7 @@ import { graphStyles } from "./graph.js";
 import { usageStyles } from "./usage.js";
 import { costsStyles } from "./costs.js";
 import { musicStyles } from "./music.js";
+import { heatingStyles } from "./heating.js";
 
 // Started from our own Homio-style mockup; scoped to the panel host.
 
@@ -827,6 +828,7 @@ export const styles = css`
   ${unsafeCSS(usageStyles)}
   ${unsafeCSS(costsStyles)}
   ${unsafeCSS(musicStyles)}
+  ${unsafeCSS(heatingStyles)}
   @media (max-width:900px){
     .card{width:auto}
     ${unsafeCSS(cardCompact("", ""))}

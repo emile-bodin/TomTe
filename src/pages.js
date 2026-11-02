@@ -11,6 +11,7 @@ import { name, deviceName } from "./model.js";
 import { pendingUpdates, installUpdate } from "./features.js";
 import { pickNet, etaText } from "./extras3.js";
 import { maPlayers, playerName, queueList, movePills, playerBar, library, speakerList, pickSpeaker } from "./music.js";
+import { heating } from "./heating.js";
 
 export const PAGES = {
   automatiseringen: { label: t("Automatiseringen"), sub: t("aan, uit en fouten"), icon: "mdi:robot-outline", ha: "/config/automation/dashboard" },
@@ -19,6 +20,7 @@ export const PAGES = {
   cameras: { label: t("Camera's"), sub: t("live beeld"), icon: "mdi:cctv", ha: null },
   systeem: { label: "Systeem", sub: "server, updates, netwerk", icon: "mdi:server-outline", ha: "/config/system" },
   muziek: { label: t("Muziek"), sub: t("speakers, favorieten, zoeken"), icon: "mdi:music", ha: null, when: hass => maPlayers(hass).length > 0 },
+  verwarming: { label: t("Verwarming"), sub: t("regeling, grafieken, opties"), icon: "mdi:radiator", ha: null, when: hass => !!hass.states["sensor.verwarming_doel"] },
 };
 /** the pages this home has: a page with `when` (Muziek needs Music Assistant) is left out when it does not apply */
 export const pagesFor = hass => Object.entries(PAGES).filter(([, v]) => !v.when || v.when(hass));
@@ -27,7 +29,7 @@ const sec = (title, cards, meta = "") => cards.length ? html`<section class="sec
 
 export function renderPage(p, key) {
   const def = PAGES[key];
-  const page = { automatiseringen: automations, sensoren: sensors, energie: energy, cameras: cameras, systeem: system, muziek: music }[key](p);
+  const page = { automatiseringen: automations, sensoren: sensors, energie: energy, cameras: cameras, systeem: system, muziek: music, verwarming: heating }[key](p);
   return html`<section class="page">
     <header class="phead">
       <div><div class="peb">${t("Meer")}<i class="dt"></i>${page.sub}</div><h1>${t(def.label)}</h1>${page.head || nothing}</div>
@@ -38,16 +40,16 @@ export function renderPage(p, key) {
 }
 
 /* ---------- shared pieces for the overview pages: KPI tiles, blocks with rows, filter pills ---------- */
-const kpi = ({ icon, svg, em = "", v, unit = "", n = "", on = false, bar = null, spark: sp = null, tap = null }) => html`<div class=${classMap({ kpi: true, on })} @click=${tap}>
+export const kpi = ({ icon, svg, em = "", v, unit = "", n = "", on = false, bar = null, spark: sp = null, tap = null }) => html`<div class=${classMap({ kpi: true, on })} @click=${tap}>
   <div class="top">${ico(icon, svg)}${em ? html`<em>${em}</em>` : nothing}</div><div class="v">${v}${unit ? html`<small>${unit}</small>` : nothing}</div><div class="n">${n}</div>
   ${bar != null ? html`<div class="bar"><i style="--v:${Math.max(0, Math.min(100, bar))}%"></i></div>` : nothing}${sp && sp.length > 1 ? html`<div class="spk">${spark(sp, 70, 26)}</div>` : nothing}</div>`;
-const srow = ({ icon, svg, name: n, sub = "", tr = nothing, val = null, unit = "", pill = null, toggle = null, on = false, dim = false, err = false, tap = null }) => html`<div class=${classMap({ srow: true, on, dim, err })} @click=${tap}>
+export const srow = ({ icon, svg, name: n, sub = "", tr = nothing, val = null, unit = "", pill = null, toggle = null, on = false, dim = false, err = false, tap = null }) => html`<div class=${classMap({ srow: true, on, dim, err })} @click=${tap}>
   ${ico(icon, svg)}<div class="nm">${n}${sub ? html`<small>${sub}</small>` : nothing}</div>${tr}
   ${toggle ? html`<span class="tog" @click=${ev => { ev.stopPropagation(); toggle(); }}></span>` : pill != null ? html`<span class="st">${pill}</span>` : html`<div class=${classMap({ val: true, dim })}>${val}${unit ? html`<small>${unit}</small>` : nothing}</div>`}</div>`;
-const sblock = (title, rows, meta = "") => rows.length ? html`<div class="sblk"><h3>${title}${meta ? html`<b>${meta}</b>` : nothing}</h3>${rows}</div>` : nothing;
-const pillbar = (list, cur, set) => html`<div class="ppills">${list.map(([k, l, icon, svg, n]) => html`<button class=${classMap({ on: cur === k })} @click=${() => set(k)}>${ico(icon, svg)}${n != null ? `${n} ${l}` : l}</button>`)}</div>`;
+export const sblock = (title, rows, meta = "") => rows.length ? html`<div class="sblk"><h3>${title}${meta ? html`<b>${meta}</b>` : nothing}</h3>${rows}</div>` : nothing;
+export const pillbar = (list, cur, set) => html`<div class="ppills">${list.map(([k, l, icon, svg, n]) => html`<button class=${classMap({ on: cur === k })} @click=${() => set(k)}>${ico(icon, svg)}${n != null ? `${n} ${l}` : l}</button>`)}</div>`;
 const hbars = (rows, max, cls = "") => html`<div class="hbars">${rows.map(r => html`<i class=${classMap({ now: r.t.getHours() === new Date().getHours(), [cls]: !!cls })} style="height:${Math.max(3, (r.v || 0) / (max || 1) * 100)}%" title="${r.t.getHours()}:00 · ${(r.v || 0).toFixed(2)}"></i>`)}</div>`;
-const fmt = (v, d = 1) => v == null ? "–" : v.toLocaleString(locale(), { maximumFractionDigits: d });
+export const fmt = (v, d = 1) => v == null ? "–" : v.toLocaleString(locale(), { maximumFractionDigits: d });
 
 /* ---------- automations: errors first, then a block per area with a toggle per row ---------- */
 function automations(p) {

@@ -43,6 +43,10 @@ Home Assistant's persistent notifications appear in **Attention** and in the not
 
 When brAIn runs in the house, what it has found and waits on the household for (the titles from `sensor.brain_findings_open_findings`) appears as rows in **Attention**, with a **brAIn** filter, and as its own line in the notification line (tap it to open the Attention popup on that filter). It can be switched off per page under *Settings → Pages → notification lines*. With nothing to report, nothing shows. Read-only: findings are handled in brAIn itself.
 
+## Heating
+
+The **Heating** page under **More** belongs to a set of Home Assistant rules that steer a thermostat (`sensor.verwarming_doel` and its helpers), and only appears when those exist. It shows what the rules do now and why, today's schedule, graphs, the effect on gas per degree day, every setting to change in place, and an explanation. Turning on the main switch takes a second tap, because the thermostat is steered from that moment.
+
 ## Connection
 
 When the connection to Home Assistant drops, a red pill at the top says so until it is back.
