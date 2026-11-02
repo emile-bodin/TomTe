@@ -4,6 +4,11 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.7.0 · 2026-11-02
+
+- **New: a Heating page under More.** It only appears when the Home Assistant rules behind `sensor.verwarming_doel` exist. One page shows what the rules do now and why, today's schedule, the main switch (turning it on takes a second tap) and the automations; graphs of room, target, Nest setpoint and boiler, outside temperature and sun, gas per day and gas per degree day against the old schedule; every temperature, time and weather limit to change in place; and a plain explanation with the current values. It is laid out like the Sensors page, with filter pills and blocks of rows, and every block has a small question mark that opens a popup explaining what the block shows and does
+- **Fix: the reset time in the AI usage popup is always on a 24-hour clock.** It followed the browser and could show AM/PM on a desktop
+
 ## 1.6.0 · 2026-11-01
 
 - **New: the people pill opens a map with today's routes.** It only showed a short list of who is home. The popup now fills the screen with Home Assistant's own map: everyone's position, their routes since midnight and your zones, with the people in a row below
