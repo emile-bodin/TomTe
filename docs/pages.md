@@ -6,7 +6,7 @@ Besides the rooms, **More** in the navigation opens a set of built-in pages. Pag
 
 ![Sensors](assets/screenshots/sensors.png)
 
-**Attention** comes first: updates (tap to install), low batteries, unreachable devices. Then a block per room, or per kind (doors, windows, motion, climate …) with the toggle top right. Filter pills narrow it down to batteries, unavailable or updates. Binary sensors show a small trend of today.
+**Attention** comes first: updates (tap to install), low batteries, unreachable devices. Two or more unreachable devices fold into one row under *All*; tap it to show or hide them. Then a block per room, or per kind (doors, windows, motion, climate …) with the toggle top right. Filter pills narrow it down to batteries, unavailable or updates. Binary sensors show a small trend of today.
 
 The Sensors page also estimates how many days a battery has left, from 30 days of statistics.
 
@@ -40,6 +40,17 @@ Only there when Home Assistant has the **Music Assistant** integration. Pills at
 
 !!! note
     Search and favourites need the id of the Music Assistant integration. An administrator's panel finds it and stores it in the household settings, so other users get it too: open the Music page once as an administrator.
+
+## Heating
+
+Only there when the Home Assistant rules behind `sensor.verwarming_doel` exist, a set of rules that steer a thermostat. Laid out like the Sensors page, with filter pills and blocks of rows:
+
+- what the rules do now and why, today's schedule, the main switch and the automations;
+- graphs of the room, target, Nest setpoint and boiler, of the outside temperature and sun, of gas per day, and of gas per degree day against the old schedule;
+- every temperature, time and weather limit, to change in place;
+- a plain explanation with the current values. Every block also has a small question mark that opens a popup about what it shows and does.
+
+Turning on the main switch takes a second tap, because the thermostat is steered from that moment.
 
 ## Your own links
 

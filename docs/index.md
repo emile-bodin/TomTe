@@ -47,7 +47,7 @@ The name is the Scandinavian *tomte*, the household spirit that quietly watches 
 
 <figure markdown>
 ![Sensors page](assets/screenshots/sensors.png)
-<figcaption>Sensors, energy, automations, cameras and system pages are built in.</figcaption>
+<figcaption>Sensors, energy, automations, cameras and system pages are built in, plus music and heating when your home has them.</figcaption>
 </figure>
 
 <figure markdown>

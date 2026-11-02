@@ -14,7 +14,7 @@ Open **More → Panel settings**. Changes are a draft until you press **Save**; 
 | **Quick actions** | the buttons under the greeting: scene, script, toggle, all lights off, media off, with optional confirmation, or an [announcement](announcements.md) (message, chimes, volume and speakers) |
 | **Motion & doorbell** | which motion sensors drive the motion bar; doorbell triggers and the camera that pops up |
 | **Calendar & waste** | calendars for the agenda card and notification line; waste sensors and their labels |
-| **Energy** | power, consumption, solar return, gas and the price per kWh |
+| **Energy** | power, consumption, solar return, gas and the price per kWh; for the [Verbruik](cards.md#verbruik) popup the contract date, the instalment and the fixed costs per month |
 | **AI usage** | the sensors for the Claude Code and ChatGPT usage cards (found automatically by name) |
 | **Groups** | cards that combine several lights, switches or plugs |
 | **Graphs** | a card with the line of one numeric sensor over the last hours or days |

@@ -60,7 +60,7 @@ A switch toggles on tap. A switch whose device also reports **power** becomes a 
 
 Washing machines, dishwashers and dryers are recognised in two ways:
 
-- a device that reports its own status (Home Connect, Home Connect Local, Miele, LG ThinQ, SmartThings, LocalThings …): the card shows the programme, progress, finish time and door, with a **Stop** button;
+- a device that reports its own status (Home Connect, Home Connect Local, Miele, LG ThinQ, SmartThings, LocalThings …): the card shows the programme, progress, finish time and door, with a **Stop** button (hidden while remote control, or Smart Control on LocalThings, is off at the machine);
 - a smart plug with a power meter: *busy* above a threshold (5 W by default, adjustable per card), *done* when it drops, *standby* otherwise.
 
 <a id="dishwasher-card"></a>
@@ -104,7 +104,7 @@ automation:
           option: "{{ 'vuil' if trigger.id == 'laden' else trigger.id }}"
 ```
 
-The month totals on the card come from sensors named after the Dutch name (`sensor.vaatwasser_cycli_maand`, `_energie_maand`, `_kosten_maand`), also when the device is called *SIEMENS Dishwasher*. Home Connect Local reports the time left as a duration (hours) and not as a finish time; the card works out the finish time from it.
+When one machine is in the same room through two integrations, for example SmartThings and LocalThings, you get one card: the integration that reports the most. The month totals on the card come from sensors named after the Dutch name (`sensor.vaatwasser_cycli_maand`, `_energie_maand`, `_kosten_maand`; `sensor.wasmachine_…` and `sensor.droger_…` for the washer and dryer), also when the device is called *SIEMENS Dishwasher* or *Samsung Washer*. Home Connect Local reports the time left as a duration (hours) and not as a finish time; the card works out the finish time from it.
 
 **Dishwasher popup.** Tapping a dishwasher opens a popup with everything the machine offers, as far as the integration exposes it (tested with Home Connect Local): **Dishes** (clean, dirty or empty, when a helper with those three options exists), the **programme** as a row of buttons (read-only while it runs), the **options** of the cycle (half load, Hygiene Plus, intensive zone, VarioSpeed Plus, quiet …), **delay start** in hours (set it, then press Start), **notices** the machine reports (filter, AquaStop, calcified heater …), **maintenance** (salt, rinse aid, MachineCare, number of cycles, Wi-Fi strength or connection) and the machine's own **settings** (child lock, water hardness, rinse-aid dosing, water connection). Start and Stop are at the top. A section that the integration does not offer is left out.
 
