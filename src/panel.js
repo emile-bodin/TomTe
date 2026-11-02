@@ -172,14 +172,26 @@ class TomtePanel extends LitElement {
   /** back to the defaults (a config.json next to the panel is imported again on the next load) */
   async resetSettings() { await saveUserConfig(this.hass, null); this.userConfig = null; this.applyConfig(); this.draft = cloneConfig(this.draftBase()); }
 
+  /** the settings page shows next to nothing live, so with a big house a sensor changing somewhere redraws it at most every 5 seconds; the doorbell still reacts at once */
+  shouldUpdate(changed) {
+    if (!this.settings || this.popup || !changed.size || ![...changed.keys()].every(k => k === "hass" || k === "tick" || k === "now")) return true;
+    watchTriggers(this);
+    if (this.popup || Date.now() - (this._liveAt || 0) > 5000) { this._liveAt = Date.now(); return true; }
+    return false;
+  }
+
   /* ---------- derived model ---------- */
-  willUpdate() {
+  willUpdate(changed) {
     if (!this.hass) return;
     setLang(this.config.language || pickLang(this.hass.language || this.hass.locale?.language));
     if (!this._userLoaded) { this._userLoaded = true; this.loadUser(); this.subscribeTemplates(); }
     if (!this._unsubNotif && this.isConnected) this._unsubNotif = subscribeNotifications(this.hass, list => { this.notifications = list; });   // again after a reconnect
-    this.rooms = buildRooms(this.hass, this.config);
-    this.home = buildHome(this.hass, this.config, this.rooms, this.notifications);
+    // typing in the settings form changes neither the house nor the applied config: keep the rooms as they are
+    const formOnly = this.settings && this.rooms && changed.size && [...changed.keys()].every(k => k === "draft" || k === "stab" || k === "saved");
+    if (!formOnly) {
+      this.rooms = buildRooms(this.hass, this.config);
+      this.home = buildHome(this.hass, this.config, this.rooms, this.notifications);
+    }
     watchTriggers(this);
     if (!this._wizardShown && this.userConfig !== undefined && !this.setupIsDone && !this.cardConfig) { this._wizardShown = true; this.popup = { type: "wizard", step: 0 }; }
     if (!this._hinted && this.userConfig !== undefined && this.setupIsDone && !this.userConfig?.hintSeen) { this._hinted = true; this.showToast(t("Tik op een kaart om te schakelen, houd vast voor details. Via ⋯ in de popup stel je dit per kaart in."), 9000, "info"); this.saveUser({ hintSeen: true }); }

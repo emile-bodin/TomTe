@@ -104,8 +104,16 @@ export const text = (v, on, ph = "") => html`<input type="text" .value=${v ?? ""
 const number = (v, on) => html`<input type="number" .value=${v ?? ""} @change=${e => on(e.target.value === "" ? null : +e.target.value)}>`;
 export const check = (v, on) => html`<input type="checkbox" .checked=${!!v} @change=${e => on(e.target.checked)}>`;
 const sortByName = list => list.sort((a, b) => (a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id, locale()));
+/** the entities of some domains, sorted by name; sorted once per version of the states, because a page can hold many dropdowns */
+const sortedCache = new WeakMap();
+const sortedOf = (hass, doms) => {
+  let lists = sortedCache.get(hass.states); if (!lists) sortedCache.set(hass.states, lists = new Map());
+  const key = doms.join();
+  if (!lists.has(key)) lists.set(key, sortByName(Object.values(hass.states).filter(s => doms.includes(domain(s.entity_id)))));
+  return lists.get(key);
+};
 export const select = (hass, dom, v, on, { empty = t("automatisch"), filter = null } = {}) => {
-  const opts = sortByName(Object.values(hass.states).filter(s => domain(s.entity_id) === dom && (!filter || filter(s))));
+  const opts = filter ? sortedOf(hass, [dom]).filter(filter) : sortedOf(hass, [dom]);
   return html`<select @change=${e => on(e.target.value || null)}><option value="">${empty}</option>${opts.map(s => html`<option value=${s.entity_id} ?selected=${s.entity_id === v}>${s.attributes.friendly_name || s.entity_id}</option>`)}</select>`;
 };
 /** the settings of an announcement quick action: message, chimes and the speakers (several can be ticked) */
@@ -126,7 +134,7 @@ function announceForm(hass, q, set) {
   </div>`;
 }
 export const selectDoms = (hass, doms, v, on, empty = t("kies")) => {
-  const opts = sortByName(Object.values(hass.states).filter(s => doms.includes(domain(s.entity_id))));
+  const opts = sortedOf(hass, doms);
   return html`<select @change=${e => on(e.target.value || null)}><option value="">${empty}</option>${opts.map(s => html`<option value=${s.entity_id} ?selected=${s.entity_id === v}>${s.attributes.friendly_name || s.entity_id}</option>`)}</select>`;
 };
 /** pill choice; `def` is what applies when nothing is chosen and picking it stores nothing (marked "std") */
@@ -173,8 +181,8 @@ export function renderSettings(p) {
   const modes = d.modes || [], setMode = (i, k, v) => set("modes", modes.map((x, j) => j === i ? { ...x, [k]: v } : x));
   const more = d.more || [], setMore = (i, k, v) => set("more", more.map((x, j) => j === i ? { ...x, [k]: v } : x));
   const quick = d.home?.quick || [], setQuick = (i, k, v) => setHome("quick", quick.map((x, j) => j === i ? { ...x, [k]: v } : x));
-  const scenes = sortByName(Object.values(hass.states).filter(s => domain(s.entity_id) === "scene")), chosen = d.home?.scenes || null;
-  const calendars = sortByName(Object.values(hass.states).filter(s => domain(s.entity_id) === "calendar"));
+  const scenes = sortedOf(hass, ["scene"]), chosen = d.home?.scenes || null;
+  const calendars = sortedOf(hass, ["calendar"]);
   const motion = p.rooms.flatMap(r => r.ents.motion.map(e => ({ ...e.state, entity_id: e.id, room: r })));
 
   const strip = o => JSON.stringify(o, (k, v) => v === undefined ? undefined : isObj(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
@@ -183,8 +191,9 @@ export function renderSettings(p) {
   const pageName = key => key === "home" ? t("Startpagina") : (p.rooms.find(r => r.id === key)?.name || key);
   const cardSummary = c => [c.name && t("naam: {n}", { n: c.name }), c.icon && t("icoon: {n}", { n: c.icon }), c.tap === "popup" && t("tikken opent details"), c.hidden && t("verborgen"), c.noColor && t("kleur uit"), c.noArt && t("albumhoes uit"), c.noMode && t("modusknoppen uit"), c.noPreset && t("thuis/weg uit"), c.live && t("live beeld"), c.noAppliance && t("apparaatfuncties uit"), c.threshold != null && t("drempel {n} W", { n: c.threshold })].filter(Boolean).join(" · ");
 
+  // one function per tab: only the open tab is built, the dropdowns of the others would cost every render
   const content = {
-    algemeen: html`
+    algemeen: () => html`
       ${sec(t("Opslag"), t("voor wie gelden de instellingen"), html`
         <div class="hint">${p.canShare ? p.scope === "global" ? t("Je bewerkt het hele huis: iedereen ziet dit.") : t("Je bewerkt alleen jouw account: afwijkend van het huis.") : t("alleen beheerders kunnen instellingen voor het hele huis wijzigen")}</div>
         <div class="hint">${p.globalConfig ? t("Huis: versie {r}, {t} door {w}", { r: String(p.globalMeta?.rev ?? "?"), t: p.globalMeta?.updatedAt ? relTime(p.globalMeta.updatedAt) : "?", w: p.globalMeta?.updatedBy || "?" }) : t("Huis: nog geen gedeelde instellingen")}<br>${(paths => paths.length ? t("Persoonlijk wint op: {p}", { p: paths.slice(0, 12).join(", ") + (paths.length > 12 ? " …" : "") }) : t("Persoonlijk: geen afwijkingen"))(personalPaths(p.userConfig))}</div>
@@ -208,20 +217,20 @@ export function renderSettings(p) {
         <div class="f"><span>${t("Installatiehulp")}<small>${t("opnieuw doorlopen; wijzigt alleen wat je invult")}</small></span><button @click=${() => p.openPopup({ type: "wizard", step: 0 })}>${t("Opnieuw starten")}</button></div>
         ${p.hashMode ? nothing : html`<div class="f"><span>${t("Startpagina van HA")}<small>${t("Home Assistant opent dan met dit panel (per gebruiker)")}</small></span><button class=${p.isDefault ? "on" : ""} @click=${() => p.setDefault(!p.isDefault)}>${p.isDefault ? t("Tomte is de startpagina") : t("Maak Tomte de startpagina")}</button></div>`}`)}`,
 
-    paginas: sec(t("Pagina's"), t("per pagina: titel, foto, kaarten (tonen, verbergen, volgorde) en de meldingenregel"), html`
+    paginas: () => sec(t("Pagina's"), t("per pagina: titel, foto, kaarten (tonen, verbergen, volgorde) en de meldingenregel"), html`
       <ul class="rooms">${["home", ...p.rooms.map(r => r.id)].map(key => { const pc = d.pages?.[key] || {}; const n = (pc.hidden || []).length, o = (pc.order || []).length, tk = Object.values(pc.ticker || {}).filter(v => v === false).length;
         return html`<li class="on"><span>${pageName(key)}<small>${[pc.title && t("titel: {t}", { t: pc.title }), pc.image && t("eigen foto"), n && t("{n} verborgen", { n }), o && t("eigen volgorde"), tk && t("{n} meldingen uit", { n: tk }), (pc.lines || []).length && t("{n} eigen regels", { n: pc.lines.length })].filter(Boolean).join(" · ") || t("standaard")}</small></span>
           <button @click=${() => p.openPopup({ type: "page", key })}>${t("Instellen")}</button>${Object.keys(pc).length ? html`<button title=${t("Herstel")} @click=${() => { const pages = { ...d.pages }; delete pages[key]; set("pages", pages); }}>×</button>` : nothing}</li>`; })}</ul>
       <div class="hint">${t("Sneller: houd de titel van een pagina ingedrukt.")}</div>`),
 
-    kamers: sec(t("Kamers"), t("{n} zichtbaar · volgorde = navigatie", { n: selected.length }) + " · " + t("Meer staat altijd achteraan"), html`<ul class="rooms">
+    kamers: () => sec(t("Kamers"), t("{n} zichtbaar · volgorde = navigatie", { n: selected.length }) + " · " + t("Meer staat altijd achteraan"), html`<ul class="rooms">
       ${selected.map((a, i) => html`<li class="on"><span>${a.name}</span>
         <button title=${t("Omhoog")} @click=${() => move(i, -1)}>↑</button><button title=${t("Omlaag")} @click=${() => move(i, 1)}>↓</button>
         <button title=${t("Verbergen")} @click=${() => setRooms(selected.filter(x => x.id !== a.id))}>×</button></li>`)}
       ${rest.map(a => html`<li><span>${a.name}</span><button title=${t("Tonen")} @click=${() => setRooms([...selected, a])}>+</button></li>`)}
     </ul>`),
 
-    startpagina: html`
+    startpagina: () => html`
       ${sec(t("Kop"), "", html`
         ${field(t("Temperatuur"), select(hass, "sensor", d.home?.temperature, v => setHome("temperature", v), { empty: t("gemiddelde van de kamers"), filter: s => s.attributes.device_class === "temperature" }))}
         ${field(t("Luchtvochtigheid"), select(hass, "sensor", d.home?.humidity, v => setHome("humidity", v), { empty: t("gemiddelde van de kamers"), filter: s => s.attributes.device_class === "humidity" }))}`)}
@@ -235,7 +244,7 @@ export function renderSettings(p) {
         ${field(t("Scènes"), html`<div class="chips">${scenes.map(s => { const on = chosen ? chosen.includes(s.entity_id) : scenes.indexOf(s) < 4;
           return html`<button class=${on ? "on" : ""} @click=${() => { const cur = chosen || scenes.slice(0, 4).map(x => x.entity_id); setHome("scenes", on ? cur.filter(x => x !== s.entity_id) : [...cur, s.entity_id]); }}>${s.attributes.friendly_name}</button>`; })}${!scenes.length ? html`<small>${t("Geen scènes gevonden")}</small>` : nothing}</div>`, t("op de scèneskaart"))}`)}`,
 
-    standaard: (() => {
+    standaard: () => {
       const types = [["light", t("Lampen"), ["steps", "colors", "today"]], ["switch", t("Schakelaars"), ["today"]], ["appliance", t("Stekkers & apparaten"), ["timer", "cost", "bars"]], ["binary_sensor", t("Deuren, ramen, beweging"), ["today", "graph"]], ["fan", t("Ventilatoren"), []], ["lock", t("Sloten"), []], ["cover", t("Rolluiken"), []], ["media_player", t("Media"), []], ["climate", t("Thermostaten"), ["heating", "outside"]]];
       const BL = { steps: t("helderheid-stappen"), colors: t("kleuren"), today: t("vandaag (uren)"), graph: t("grafiek (aan/uit-lijn)"), timer: t("timer"), cost: t("kosten"), bars: t("verbruik per uur"), heating: t("vandaag verwarmd"), outside: t("buitentemperatuur") };
       const all = d.cardDefaults || {}, setT = (type, patch) => { const cur = { ...(all[type] || {}), ...patch }; for (const k of Object.keys(cur)) if (cur[k] === undefined) delete cur[k]; const next = { ...all }; if (Object.keys(cur).length) next[type] = cur; else delete next[type]; set("cardDefaults", Object.keys(next).length ? next : undefined); };
@@ -248,8 +257,8 @@ export function renderSettings(p) {
           ${field(t("Tonen"), html`<span class="chk3"><label><input type="checkbox" .checked=${!c.hideName} @change=${e => setT(type, { hideName: e.target.checked ? undefined : true })}> ${t("Naam")}</label><label><input type="checkbox" .checked=${!c.hideSub} @change=${e => setT(type, { hideSub: e.target.checked ? undefined : true })}> ${t("Ondertitel")}</label><label><input type="checkbox" .checked=${!c.hideState} @change=${e => setT(type, { hideState: e.target.checked ? undefined : true })}> ${t("Staat")}</label></span>`)}
           ${["light", "switch", "binary_sensor", "lock", "cover", "fan"].includes(type) ? field(t("Batterij tonen"), check(!!c.showBattery, v => setT(type, { showBattery: v || undefined })), t("rechtsonder, als het apparaat er een heeft")) : nothing}
         </div>`; })}`);
-    })(),
-    groepen: (() => {
+    },
+    groepen: () => {
       const groups = d.groups || [], setG = (i, patch) => { const list = groups.map((g, k) => k === i ? { ...g, ...patch } : g); set("groups", list); };
       const cands = p.rooms.flatMap(r => [...r.ents.lights, ...r.ents.switches, ...r.ents.fans, ...r.ents.appliances.filter(a => a.switch).map(a => a.switch)].map(e => ({ id: e.id, name: `${r.name} · ${e.state?.attributes?.friendly_name || e.id}` })));
       return sec(t("Groepen"), t("één kaart voor meerdere lampen, schakelaars of stekkers; tikken op een tegel schakelt dat ene, de kaart zelf opent de lijst"), html`
@@ -262,8 +271,8 @@ export function renderSettings(p) {
           ${field(t("Onderdelen"), html`<select multiple size="6" @change=${e => setG(i, { members: [...e.target.selectedOptions].map(o => o.value) })}>${cands.map(c => html`<option value=${c.id} ?selected=${(g.members || []).includes(c.id)}>${c.name}</option>`)}</select>`, t("Ctrl/Cmd-klik voor meerdere"))}
         </div>`)}
         <button class="add" @click=${() => set("groups", [...groups, { id: "grp" + Date.now().toString(36), name: "", members: [], style: "tiles", room: "home" }])}>${t("+ groep")}</button>`);
-    })(),
-    grafieken: (() => {
+    },
+    grafieken: () => {
       const graphs = d.graphs || [], setG = (i, patch) => set("graphs", graphs.map((g, k) => k === i ? { ...g, ...patch } : g));
       const numeric = s => domain(s.entity_id) === "sensor" && Number.isFinite(parseFloat(s.state)) && !["timestamp", "date", "enum"].includes(s.attributes.device_class);
       return sec(t("Grafieken"), t("één kaart per sensor met een lijn van de laatste uren; tikken opent de Home Assistant-grafiek"), html`
@@ -275,8 +284,8 @@ export function renderSettings(p) {
           ${field(t("Periode"), html`<select @change=${e => setG(i, { hours: +e.target.value })}>${GRAPH_HOURS.map(n => html`<option value=${n} ?selected=${(+g.hours || 24) === n}>${n % 24 ? t("{n} uur", { n }) : n === 24 ? t("24 uur") : t("{n} dagen", { n: n / 24 })}</option>`)}</select>`)}
         </div>`)}
         <button class="add" @click=${() => set("graphs", [...graphs, { id: "gr" + Date.now().toString(36), room: "home", hours: 24 }])}>${t("+ grafiek")}</button>`);
-    })(),
-    acties: sec(t("Snelle acties"), t("knoppen onder de begroeting op de startpagina"), html`
+    },
+    acties: () => sec(t("Snelle acties"), t("knoppen onder de begroeting op de startpagina"), html`
       ${quick.map((q, i) => html`<div class="row quick">${text(q.label, v => setQuick(i, "label", v), "label")}${text(q.icon, v => setQuick(i, "icon", v), t("mdi:icon (optioneel)"))}
         <select @change=${e => setQuick(i, "type", e.target.value)}>${Object.entries(QUICK_TYPES).map(([k, l]) => html`<option value=${k} ?selected=${(q.type || "scene") === k}>${t(l)}</option>`)}</select>
         ${q.type === "lights_off" || q.type === "media_off" || q.type === "announce" ? html`<span></span>` : selectDoms(hass, q.type === "script" ? ["script"] : q.type === "entity" ? QUICK_DOMAINS : ["scene"], q.entity, v => setQuick(i, "entity", v))}
@@ -285,20 +294,20 @@ export function renderSettings(p) {
       ${!quick.length ? html`<div class="hint">${t("Nog geen acties. Bijvoorbeeld: Welterusten (script), Alles uit (alle lampen uit, met bevestiging) of Film (scène).")}</div>` : nothing}
       <button class="add" @click=${() => setHome("quick", [...quick, { label: "", type: "scene" }])}>${t("+ snelle actie")}</button>`),
 
-    meldingen: html`
+    meldingen: () => html`
       ${sec(t("Bewegingsbalk"), t("welke sensoren de balk onderaan tonen"), html`${motion.length ? chips(motion, d.home?.bannerSensors || null, motion.map(m => m.entity_id), l => setHome("bannerSensors", l), s => html`<small style="opacity:.6"> · ${s.room.name}</small>`) : html`<small>${t("Geen bewegingssensoren in de kamers")}</small>`}`)}
       ${sec(t("Deurbel / camera-popup"), t("opent de camera als een sensor afgaat"), html`
         ${field(t("Camera"), select(hass, "camera", d.home?.doorbell?.camera, v => setBell("camera", v), { empty: t("uit") }))}
         ${field(t("Seconden"), number(d.home?.doorbell?.seconds ?? 30, v => setBell("seconds", v)), t("daarna sluit de popup vanzelf"))}
         <div class="chips">${triggerCandidates(hass).map(s => { const cur = d.home?.doorbell?.triggers || [], on = cur.includes(s.entity_id); return html`<button class=${on ? "on" : ""} title=${s.entity_id} @click=${() => setBell("triggers", on ? cur.filter(x => x !== s.entity_id) : [...cur, s.entity_id])}>${s.attributes.friendly_name || s.entity_id}</button>`; })}${!triggerCandidates(hass).length ? html`<small>${t("Geen geschikte sensoren gevonden")}</small>` : nothing}</div>`)}`,
 
-    agenda: html`
+    agenda: () => html`
       ${sec(t("Agenda"), t("kaart + regel in de meldingen"), html`${calendars.length ? chips(calendars, d.home?.calendars || null, calendars.map(c => c.entity_id), l => setHome("calendars", l)) : html`<small>${t("Geen agenda's gevonden")}</small>`}`)}
       ${sec(t("Afval"), t("Afvalbeheer-sensoren"), html`
         ${waste.map((w, i) => html`<div class="row">${select(hass, "sensor", w.entity, v => setWaste(i, "entity", v), { empty: t("kies sensor") })}${text(w.label, v => setWaste(i, "label", v), "label")}<button @click=${() => setHome("waste", waste.filter((_, j) => j !== i))}>×</button></div>`)}
         <button class="add" @click=${() => setHome("waste", [...waste, { entity: null, label: "" }])}>${t("+ afvalstroom")}</button>`)}`,
 
-    energie: sec(t("Energie"), t("kaart verschijnt zodra vermogen is gekozen"), html`
+    energie: () => sec(t("Energie"), t("kaart verschijnt zodra vermogen is gekozen"), html`
       ${field(t("Vermogen nu"), select(hass, "sensor", d.home?.energy?.power, v => setEnergy("power", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "W" }))}
       ${field(t("Verbruik vandaag"), select(hass, "sensor", d.home?.energy?.today, v => setEnergy("today", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "kWh" }))}
       ${field(t("Teruggeleverd"), select(hass, "sensor", d.home?.energy?.returned, v => setEnergy("returned", v), { empty: t("geen"), filter: s => s.attributes.unit_of_measurement === "kWh" }))}
@@ -308,27 +317,27 @@ export function renderSettings(p) {
       ${field(t("Termijnbedrag per maand"), html`<input type="number" step="0.01" min="0" .value=${d.home?.energy?.term ?? ""} placeholder="150.00" @change=${e => setEnergy("term", e.target.value === "" ? undefined : +e.target.value)}>`, t("wat je maandelijks vooruitbetaalt; de Verbruik-popup vergelijkt het met een jaar verbruik"))}
       ${field(t("Vaste kosten per maand"), html`<input type="number" step="0.01" .value=${d.home?.energy?.fixed ?? ""} placeholder="15.00" @change=${e => setEnergy("fixed", e.target.value === "" ? undefined : +e.target.value)}>`, t("vastrecht en netbeheer min de vermindering energiebelasting, van stroom en gas samen"))}`),
 
-    ai: html`${[["claude", "Claude Code"], ["chatgpt", "ChatGPT"]].map(([prov, title]) => sec(title, t("kaart via Bewerken → Kaart toevoegen"), html`
+    ai: () => html`${[["claude", "Claude Code"], ["chatgpt", "ChatGPT"]].map(([prov, title]) => sec(title, t("kaart via Bewerken → Kaart toevoegen"), html`
       ${field(t("Sessie (5 uur)"), select(hass, "sensor", d.home?.[prov]?.session, v => setUsage(prov, "session", v), { empty: t("automatisch"), filter: s => s.attributes.unit_of_measurement === "%" }), t("percentage gebruikt in het 5-uursvenster"))}
       ${field(t("Week"), select(hass, "sensor", d.home?.[prov]?.week, v => setUsage(prov, "week", v), { empty: t("automatisch"), filter: s => s.attributes.unit_of_measurement === "%" }), t("percentage gebruikt in de weeklimiet"))}
       ${field(t("Reset sessie"), select(hass, "sensor", d.home?.[prov]?.sessionReset, v => setUsage(prov, "sessionReset", v), { empty: t("automatisch") }), t("alleen nodig als de sessiesensor zelf geen resettijd heeft"))}
       ${field(t("Reset week"), select(hass, "sensor", d.home?.[prov]?.weekReset, v => setUsage(prov, "weekReset", v), { empty: t("automatisch") }), t("alleen nodig als de weeksensor zelf geen resettijd heeft"))}`))}`,
 
-    templates: sec(t("Templatekaarten"), t("sjablonen met Jinja; plaatsen doe je per pagina via Bewerken → Kaart toevoegen"), html`<ul class="rooms">
+    templates: () => sec(t("Templatekaarten"), t("sjablonen met Jinja; plaatsen doe je per pagina via Bewerken → Kaart toevoegen"), html`<ul class="rooms">
       ${(d.templates || []).map((tp, i) => html`<li class="on"><span>${tp.name || t("Naamloos")}<small>${tp.ask?.length ? t("{n} invulvelden", { n: tp.ask.length }) + " · " : ""}${tp.state || t("geen template")}</small></span><button title=${t("Bewerken")} @click=${() => p.openPopup({ type: "tpl", index: i })}>✎</button><button title=${t("Verwijderen")} @click=${() => set("templates", (d.templates || []).filter((_, j) => j !== i))}>×</button></li>`)}
       ${!(d.templates || []).length ? html`<li><span>${t("Nog geen templatekaarten")}</span></li>` : nothing}
     </ul><button class="add" @click=${() => { const list = [...(d.templates || []), { id: "tpl" + Date.now().toString(36), name: "", icon: "mdi:code-braces", state: "", room: "none" }]; set("templates", list); p.openPopup({ type: "tpl", index: list.length - 1 }); }}>${t("+ templatekaart")}</button>`),
 
-    meer: sec(t("Meer-menu"), t("eigen links naast de ingebouwde pagina's"), html`
+    meer: () => sec(t("Meer-menu"), t("eigen links naast de ingebouwde pagina's"), html`
       ${more.map((m, i) => html`<div class="row r4">${text(m.label, v => setMore(i, "label", v), "label")}${text(m.icon, v => setMore(i, "icon", v), "mdi:icon")}${text(m.path, v => setMore(i, "path", v), "/pad")}<button @click=${() => set("more", more.filter((_, j) => j !== i))}>×</button></div>`)}
       <button class="add" @click=${() => set("more", [...more, { label: "", icon: "mdi:link", path: "/" }])}>${t("+ pagina")}</button>`),
 
-    modi: sec(t("Modi"), t("een schakelaar of input_boolean per modus; automatiseringen in Home Assistant doen de rest"), html`
+    modi: () => sec(t("Modi"), t("een schakelaar of input_boolean per modus; automatiseringen in Home Assistant doen de rest"), html`
       ${modes.map((m, i) => html`<div class="row r4">${text(m.label, v => setMode(i, "label", v), t("label"))}${text(m.icon, v => setMode(i, "icon", v), "mdi:icon")}${selectDoms(hass, ["input_boolean", "switch"], m.entity, v => setMode(i, "entity", v))}<button @click=${() => set("modes", modes.filter((_, j) => j !== i))}>×</button></div>`)}
       ${!modes.length ? html`<div class="hint">${t("Nog geen modi. Bijvoorbeeld Gast of Vakantie, gekoppeld aan een input_boolean.")}</div>` : nothing}
       <button class="add" @click=${() => set("modes", [...modes, { label: "", icon: "mdi:account-switch-outline" }])}>${t("+ modus")}</button>
       <div class="hint">${t("De modi staan in het Meer-menu; een actieve modus verschijnt in de meldingenregel van de startpagina.")}</div>`),
-    kaarten: sec(t("Kaartinstellingen"), t("aanpassen via ⋯ in de popup van een kaart"), html`<ul class="rooms">
+    kaarten: () => sec(t("Kaartinstellingen"), t("aanpassen via ⋯ in de popup van een kaart"), html`<ul class="rooms">
       ${Object.entries(d.cards || {}).map(([id, c]) => html`<li class="on"><span>${c.name || hass.states[id]?.attributes.friendly_name || id}<small>${cardSummary(c) || t("geen wijzigingen")}</small></span><button title=${t("Herstel")} @click=${() => { const cards = { ...d.cards }; delete cards[id]; set("cards", cards); }}>×</button></li>`)}
       ${!Object.keys(d.cards || {}).length ? html`<li><span>${t("Nog geen kaarten gewijzigd")}</span></li>` : nothing}
     </ul>`),
@@ -344,7 +353,7 @@ export function renderSettings(p) {
       </div></header>
     <div class="sbody">
       <nav class="tabs">${TABS.map(tb => html`<button class=${tb.id === tab ? "on" : ""} @click=${() => { p.stab = tb.id; }}><ha-icon icon=${tb.icon}></ha-icon><span>${t(tb.label)}<small>${t(tb.sub)}</small></span></button>`)}</nav>
-      <div class="scontent">${content[tab]}</div>
+      <div class="scontent">${content[tab]()}</div>
     </div>
   </section>`;
 }
