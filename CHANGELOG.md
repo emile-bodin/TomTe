@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.9.0 · 2026-11-03
+
 - **New: the idle screen shows what is active, and you can tap it.** It only showed the clock, the weather and a line of totals, and every tap just woke the panel. Tiles now show washers, dryers and dishwashers that are busy or done, a car that is charging, what is playing, and per room the lights that are on. Tapping a tile wakes the panel on that room; a car and "+N more" go to the home page. Tapping beside a tile wakes the panel where it was. Moving a mouse no longer wakes the idle screen, because a mouse could otherwise never reach a tile: click, touch, a key or scrolling does.
 - **New: choose what the idle screen shows.** Everything on it was fixed, so a wall tablet could not leave out what it did not need. Settings → General → Idle screen now has a switch for the date, the weather, the indoor temperature, open doors, notices, appliances, a charging car, music and TV, and lights. The choice is per user and the clock always stays. Show now previews your choices before you save them.
 
