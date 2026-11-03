@@ -34,7 +34,7 @@ export const saveUserConfig = (hass, value) => hass.callWS({ type: "frontend/set
    settings header switches to "only me". */
 
 /** keys that are always personal, whatever the scope */
-export const PERSONAL_KEYS = ["setupDone", "hintSeen", "importedAt", "idleMinutes", "language", "saveScope"];
+export const PERSONAL_KEYS = ["setupDone", "hintSeen", "importedAt", "idleMinutes", "idleHide", "language", "saveScope"];
 /** the part of a config that is personal (own = true) or shareable (own = false) */
 export const pick = (cfg, own) => Object.fromEntries(Object.entries(cfg || {}).filter(([k]) => PERSONAL_KEYS.includes(k) === own));
 
@@ -213,9 +213,11 @@ export function renderSettings(p) {
         ${field(t("Batterij-grens"), number(d.home?.lowBattery ?? 20, v => setHome("lowBattery", v)), t("onder dit percentage in Aandacht"))}
         ${field(t("Controleren op updates"), check(!d.noUpdateCheck, v => set("noUpdateCheck", v ? undefined : true)), t("melding op de startpagina als er een nieuwe Tomte is (alleen voor beheerders)"))}
         ${field(t("Lichtscènes"), check(!d.noPresets, v => set("noPresets", v ? undefined : true)), t("kaart in elke kamer met lampen: sla lampstanden op en roep ze terug"))}
-        <div class="f"><span>${t("Slaapstand na")}<small>${t("minuten zonder aanraking; 0 = uit")}</small></span><div class="row" style="grid-template-columns:1fr max-content;margin:0">${number(d.idleMinutes ?? 0, v => set("idleMinutes", v))}<button @click=${() => p.showIdle()}>${t("Nu tonen")}</button></div></div>
         <div class="f"><span>${t("Installatiehulp")}<small>${t("opnieuw doorlopen; wijzigt alleen wat je invult")}</small></span><button @click=${() => p.openPopup({ type: "wizard", step: 0 })}>${t("Opnieuw starten")}</button></div>
-        ${p.hashMode ? nothing : html`<div class="f"><span>${t("Startpagina van HA")}<small>${t("Home Assistant opent dan met dit panel (per gebruiker)")}</small></span><button class=${p.isDefault ? "on" : ""} @click=${() => p.setDefault(!p.isDefault)}>${p.isDefault ? t("Tomte is de startpagina") : t("Maak Tomte de startpagina")}</button></div>`}`)}`,
+        ${p.hashMode ? nothing : html`<div class="f"><span>${t("Startpagina van HA")}<small>${t("Home Assistant opent dan met dit panel (per gebruiker)")}</small></span><button class=${p.isDefault ? "on" : ""} @click=${() => p.setDefault(!p.isDefault)}>${p.isDefault ? t("Tomte is de startpagina") : t("Maak Tomte de startpagina")}</button></div>`}`)}
+      ${sec(t("Screensaver"), t("alleen voor jouw account; de klok staat er altijd"), html`
+        <div class="f"><span>${t("Slaapstand na")}<small>${t("minuten zonder aanraking; 0 = uit")}</small></span><div class="row" style="grid-template-columns:1fr max-content;margin:0">${number(d.idleMinutes ?? 0, v => set("idleMinutes", v))}<button @click=${() => p.showIdle()}>${t("Nu tonen")}</button></div></div>
+        ${[["date", t("Datum")], ["weather", t("Weer")], ["temp", t("Binnentemperatuur")], ["doors", t("Open deuren")], ["notices", t("Meldingen")], ["appliances", t("Wasmachine, droger en vaatwasser")], ["cars", t("Auto die laadt")], ["media", t("Muziek en tv")], ["lights", t("Lampen")]].map(([k, label]) => field(label, check(!d.idleHide?.includes(k), v => { const l = (d.idleHide || []).filter(x => x !== k); set("idleHide", v ? (l.length ? l : undefined) : [...l, k]); })))}`)}`,
 
     paginas: () => sec(t("Pagina's"), t("per pagina: titel, foto, kaarten (tonen, verbergen, volgorde) en de meldingenregel"), html`
       <ul class="rooms">${["home", ...p.rooms.map(r => r.id)].map(key => { const pc = d.pages?.[key] || {}; const n = (pc.hidden || []).length, o = (pc.order || []).length, tk = Object.values(pc.ticker || {}).filter(v => v === false).length;

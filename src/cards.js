@@ -812,9 +812,9 @@ function lampSection(p, x) {
 
 /* ---------- electric car (Stellantis Vehicles): the time left while it charges, otherwise the battery ---------- */
 /** the cars in Home Assistant, by the part of their entity ids before the sensor name (the VIN) */
-const carIds = hass => Object.keys(hass.states).filter(id => id.startsWith("sensor.") && id.endsWith("_battery_charging_end")).map(id => id.slice(7, -21));
+export const carIds = hass => Object.keys(hass.states).filter(id => id.startsWith("sensor.") && id.endsWith("_battery_charging_end")).map(id => id.slice(7, -21));
 /** the card's name: the device is called after its VIN until someone renames it */
-function carTitle(p, k) {
+export function carTitle(p, k) {
   const dev = p.hass.entities?.[`sensor.${k}_battery`]?.device_id, nm = dev ? deviceName(p.hass, dev) : "";
   return cardCfg(p, "car:" + k).name || (nm && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(nm) ? nm : t("Elektrische auto"));
 }

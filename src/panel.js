@@ -58,8 +58,8 @@ class TomtePanel extends LitElement {
     addEventListener("keydown", this._onKey);
     // inside a Lovelace card the dashboard owns the URL path, so rooms are routed through the hash
     if (this.hashMode) { this._onHash = () => { this.route = { path: location.hash.replace(/^#/, "") || "/", prefix: "" }; }; addEventListener("hashchange", this._onHash); this._onHash(); }
-    // idle screen: any input resets the timer
-    this._activity = e => { this._lastActivity = Date.now(); if (this.idle) this.wake(e?.type === "pointerdown" || e?.type === "touchstart"); };
+    // idle screen: any input resets the timer; moving a mouse does not wake it, or a mouse could never reach its tiles
+    this._activity = e => { this._lastActivity = Date.now(); if (this.idle && e?.type !== "pointermove") this.wake(e?.type === "pointerdown" || e?.type === "touchstart"); };
     // the tap that wakes the idle screen must not also press the card under it
     this._eatClick = e => { if (this._eatUntil) { if (Date.now() < this._eatUntil) { e.stopImmediatePropagation(); e.preventDefault(); } this._eatUntil = 0; } };
     addEventListener("click", this._eatClick, true);

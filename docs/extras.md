@@ -33,7 +33,7 @@ Under **Settings → Motion & doorbell** pick trigger sensors (a binary sensor o
 
 ## Idle screen
 
-**Settings → General → Idle screen**: after a number of minutes without touch, the panel dims to the clock, date, weather and a status line. A touch wakes it. Made for wall tablets.
+**Settings → General → Idle screen**: after a number of minutes without touch, the panel dims to the clock, date, weather and a status line, with tiles for what is active: washers, dryers and dishwashers that are busy or done, a car that is charging, what is playing, and the lights that are on per room. Tap a tile to go to its room (a car and "+N more" go to the home page); a touch anywhere else wakes the panel where it was. Moving a mouse does not wake it. Below the minutes you switch off what you do not want to see, per user; the clock always stays. Made for wall tablets.
 
 ## Notifications
 

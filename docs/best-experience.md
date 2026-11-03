@@ -28,7 +28,7 @@ For a tablet on the wall:
 
 - Use a **kiosk browser**, such as Fully Kiosk Browser on Android, so the browser bars disappear and the screen stays on.
 - Log in with a **separate Home Assistant user** for the tablet, and give that user the start page and hidden sidebar from steps 1 and 2.
-- Turn on the **idle screen** under **More → Panel settings → General → Idle screen after**: after a few minutes without touch the panel dims to the clock, the weather and a status line, and a touch wakes it.
+- Turn on the **idle screen** under **More → Panel settings → General → Idle screen after**: after a few minutes without touch the panel dims to the clock, the weather, a status line and tiles for what is active. Tap a tile to go to its room; a touch anywhere else wakes the panel.
 - Set up the **doorbell popup** under **Settings → Motion & doorbell**, so the camera appears when someone rings.
 
 ## Also worth it

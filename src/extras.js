@@ -1,10 +1,10 @@
 // Notifications, energy statistics, alarm keypad and the idle screen.
 import { t, locale } from "./i18n.js";
 import { html, nothing } from "lit";
-import { num, clock } from "./util.js";
-import { condText, condIcon, cardCfg, isHidden, applianceIcon } from "./cards.js";
+import { num, clock, isOn, unavailable } from "./util.js";
+import { condText, condIcon, cardCfg, isHidden, applianceIcon, mediaView, carIds, carTitle } from "./cards.js";
 import { applianceState, applianceEnd } from "./extras2.js";
-import { deviceName } from "./model.js";
+import { deviceName, name as entName } from "./model.js";
 
 /* ---------- persistent notifications (live subscription) ---------- */
 export function subscribeNotifications(hass, cb) {
@@ -44,20 +44,43 @@ export function keypad(p, pop) {
 }
 
 /* ---------- idle screen ---------- */
+const IDLE_TILES = 6;
+/** what is active right now, most time-bound first: { icon, name, sub, room }; a tap goes to the room (a car has none: home) */
+function idleTiles(p, show) {
+  const appliances = p.rooms.flatMap(r => r.ents.appliances.filter(a => !a.plain && !isHidden(p, a.id) && /^mdi:(washing-machine|tumble-dryer|dishwasher)$/.test(applianceIcon(cardCfg(p, a.id).name || deviceName(p.hass, a.device)))).map(a => {
+    const c = cardCfg(p, a.id), st = applianceState(p.hass, a, c.threshold ?? 5), name = c.name || deviceName(p.hass, a.device);
+    return ["running", "waiting", "done"].includes(st.st) ? { icon: c.icon || applianceIcon(name), name, sub: [st.label, applianceEnd(st)].filter(Boolean).join(" · "), room: r } : null;
+  })).filter(Boolean);
+  const cars = carIds(p.hass).filter(k => !isHidden(p, "car:" + k) && p.hass.states[`binary_sensor.${k}_battery_charging`]?.state === "on").map(k => {
+    const batt = p.hass.states[`sensor.${k}_battery`], end = new Date(p.hass.states[`sensor.${k}_battery_charging_end`]?.state);
+    return { icon: cardCfg(p, "car:" + k).icon || "mdi:car-electric-outline", name: carTitle(p, k), sub: [unavailable(batt) ? t("Laden") : `${num(batt.state)}%`, end > Date.now() ? t("Klaar om {t}", { t: end.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) }) : ""].filter(Boolean).join(" · "), room: null };
+  });
+  const media = p.rooms.flatMap(r => r.ents.media.filter(e => !isHidden(p, e.id)).map(e => {
+    const v = mediaView(p, e), a = v.info?.attributes || {};
+    return v.playing || v.paused ? { icon: cardCfg(p, e.id).icon || (a.media_content_type === "music" || a.media_artist ? "mdi:music" : "mdi:television"), name: v.title || v.app?.name || cardCfg(p, e.id).name || entName(p.hass, e), sub: [r.name, v.playing ? "" : t("Gepauzeerd")].filter(Boolean).join(" · "), room: r } : null;
+  })).filter(Boolean);
+  const lights = p.rooms.map(r => {
+    const on = r.ents.lights.filter(e => isOn(e.state) && !e.reg.entity_category && !isHidden(p, e.id));
+    return on.length ? { icon: "mdi:lightbulb-on-outline", name: r.name, sub: on.length > 1 ? t("{n} lampen", { n: on.length }) : cardCfg(p, on[0].id).name || entName(p.hass, on[0]), room: r } : null;
+  }).filter(Boolean);
+  const all = [...(show("appliances") ? appliances : []), ...(show("cars") ? cars : []), ...(show("media") ? media : []), ...(show("lights") ? lights : [])];
+  return all.length > IDLE_TILES ? [...all.slice(0, IDLE_TILES - 1), { icon: "mdi:dots-horizontal", name: t("+{n} meer", { n: all.length - IDLE_TILES + 1 }), sub: "", room: null }] : all;
+}
+
 export function idleScreen(p) {
   const w = p.home?.weather, h = p.home;
   const date = new Date().toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
   // the content drifts a little each minute (screen burn-in) and is dimmer between 23:00 and 06:00
   const min = Math.floor(Date.now() / 60000), rnd = k => { const v = Math.sin(min * 12.9898 + k * 78.233) * 43758.5453; return (v - Math.floor(v)) * 2 - 1; }, hr = new Date().getHours(), night = hr >= 23 || hr < 6;
+  // what the settings hide; the unsaved choices count while the settings are open, so "Nu tonen" previews them
+  const hide = (p.draft || p.config).idleHide || [], show = k => !hide.includes(k), tiles = idleTiles(p, show);
+  const line = [show("temp") && h?.temp != null ? t("{t}° binnen", { t: h.temp.toFixed(1) }) : "", show("doors") && h?.doorsOpen?.length ? t("{n} deur open", { n: h.doorsOpen.length }) : "", show("notices") && h?.attention?.length ? t("{n} meldingen", { n: h.attention.length }) : ""].filter(Boolean).join(" · ");
   return html`<div class="idle" style=${`--ix:${(rnd(1) * 8).toFixed(2)}vw;--iy:${(rnd(2) * 10).toFixed(2)}vh;--io:${night ? 0.35 : 1}`} @pointerdown=${() => p.wake(true)}>
     <div class="iclock">${clock()}</div>
-    <div class="idate">${date}</div>
-    ${w ? html`<div class="iwx"><ha-icon icon=${condIcon(w.state)}></ha-icon>${Math.round(num(w.attributes.temperature) ?? 0)}° · ${condText(w.state)}</div>` : nothing}
-    <div class="iline">${[h?.temp != null ? t("{t}° binnen", { t: h.temp.toFixed(1) }) : "", h?.lightsOn?.length ? t("{n} lampen aan", { n: h.lightsOn.length }) : "", h?.doorsOpen?.length ? t("{n} deur open", { n: h.doorsOpen.length }) : "", h?.attention?.length ? t("{n} meldingen", { n: h.attention.length }) : ""].filter(Boolean).join(" · ")}</div>
-    ${p.rooms.flatMap(r => r.ents.appliances).filter(a => !a.plain && !isHidden(p, a.id) && /^mdi:(washing-machine|tumble-dryer)$/.test(applianceIcon(cardCfg(p, a.id).name || deviceName(p.hass, a.device)))).map(a => {
-      const c = cardCfg(p, a.id), st = applianceState(p.hass, a, c.threshold ?? 5), name = c.name || deviceName(p.hass, a.device);
-      return ["running", "waiting", "done"].includes(st.st) ? { icon: c.icon || applianceIcon(name), name, label: st.label, left: applianceEnd(st) } : null;
-    }).filter(Boolean).map(x => html`<div class="iwx"><ha-icon icon=${x.icon}></ha-icon>${[x.name, x.label, x.left].filter(Boolean).join(" · ")}</div>`)}
+    ${show("date") ? html`<div class="idate">${date}</div>` : nothing}
+    ${w && show("weather") ? html`<div class="iwx"><ha-icon icon=${condIcon(w.state)}></ha-icon>${Math.round(num(w.attributes.temperature) ?? 0)}° · ${condText(w.state)}</div>` : nothing}
+    ${line ? html`<div class="iline">${line}</div>` : nothing}
+    ${tiles.length ? html`<div class="itiles">${tiles.map(x => html`<div class="itile" @pointerdown=${() => p.go(x.room)}><ha-icon icon=${x.icon}></ha-icon><div><b>${x.name}</b>${x.sub ? html`<small>${x.sub}</small>` : nothing}</div></div>`)}</div>` : nothing}
   </div>`;
 }
 
@@ -81,4 +104,12 @@ export const extraStyles = `
   .iwx{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:.8;margin-top:14px}
   .iwx ha-icon{--mdc-icon-size:24px}
   .iline{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-top:4px}
+  .itiles{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;width:min(860px,82vw);margin-top:14px}
+  .itile{flex:0 1 270px;min-width:0;min-height:56px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:8px 14px;border:1px solid rgba(255,255,255,.16);border-radius:var(--r-sm);background:rgba(255,255,255,.06)}
+  .itile ha-icon{--mdc-icon-size:24px;flex:none;opacity:.8}
+  .itile>div{min-width:0}
+  .itile b,.itile small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .itile b{font-size:14px;font-weight:600}
+  .itile small{font-size:11px;font-weight:500;opacity:.65;margin-top:2px}
+  @media (max-height:520px){.iclock{font-size:64px;letter-spacing:-2px}.idate,.iline{display:none}.iwx{margin-top:0}.itiles{margin-top:2px}.itile{flex-basis:200px;min-height:48px;padding:4px 12px}}
 `;
