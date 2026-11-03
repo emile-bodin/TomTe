@@ -387,4 +387,7 @@ export default {
   "Een probleem dat nu speelt: de Nest is onbereikbaar, staat op uit, of volgt het doel al 30 minuten niet.": "Ein aktuelles Problem: Das Nest ist nicht erreichbar, ist aus oder folgt dem Ziel seit 30 Minuten nicht.",
   "Dit blok verschijnt alleen als er iets mis is. Tik op de rij voor de details van de Nest. Een aanhoudende afwijking stuurt ook één melding per dag naar je telefoon.": "Dieser Block erscheint nur, wenn etwas nicht stimmt. Tippe auf die Zeile für die Details des Nest. Eine anhaltende Abweichung schickt außerdem eine Mitteilung pro Tag an dein Telefon.",
   "Vul een tijd in, zoals 06:30": "Gib eine Zeit ein, z. B. 06:30",
+  "tot 4 lampen op één kaart, elk met eigen regelaars": "bis zu 4 Lichter auf einer Karte, jedes mit eigenen Reglern", "Nieuwe lampenkaart": "Neue Lichterkarte", "Eén kaart voor maximaal 4 lampen; tik op de kaart voor alle regelaars": "Eine Karte für bis zu 4 Lichter; tippe auf die Karte für alle Regler", "{n} van {m} gekozen": "{n} von {m} gewählt", "tik op een lamp om te schakelen, houd vast voor alle regelaars": "tippe auf ein Licht zum Schalten, halte es für alle Regler", "lampen (tot 4, met regelaars)": "Lichter (bis zu 4, mit Reglern)",
+  "Uitgehaald": "Herausgenommen",
+  "Elektrische auto": "Elektroauto", "Laden": "Lädt", "Ingeplugd": "Eingesteckt", "Onderweg": "Unterwegs", "Klaar om {t}": "Fertig um {t}", "{km} bereik": "{km} Reichweite", "laadt niet": "lädt nicht", "op slot": "verriegelt", "niet op slot": "nicht verriegelt", "Bijgewerkt {t}": "Aktualisiert {t}",
 };

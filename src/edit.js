@@ -6,7 +6,7 @@ import { html, nothing } from "lit";
 import { classMap } from "lit/directives/class-map.js";
 import { t, locale } from "./i18n.js";
 import { domain, num, stateText } from "./util.js";
-import { cardFor, homeCards, findCard } from "./cards.js";
+import { cardFor, homeCards, findCard, LAMP_MAX } from "./cards.js";
 import { GRAPH_HOURS } from "./graph.js";
 import { scopePicker } from "./settings.js";
 import { usageAvailable } from "./usage.js";
@@ -18,6 +18,7 @@ export const isBuiltin = key => !key.includes(".") && !key.startsWith("device:")
 /** template fields a template can ask for when it is placed */
 export const TPL_ASK = [["state", "Tekst"], ["label", "Label"], ["visible", "Zichtbaar (voorwaarde)"]];
 /** what a group can contain: lights, switches, fans and the switch of an appliance, across all rooms */
+export const lampCandidates = p => p.rooms.flatMap(r => r.ents.lights.map(e => ({ id: e.id, name: `${r.name} · ${e.state?.attributes?.friendly_name || e.id}` })));
 export const groupCandidates = p => p.rooms.flatMap(r => [...r.ents.lights, ...r.ents.switches, ...r.ents.fans, ...r.ents.appliances.filter(a => a.switch).map(a => a.switch)].map(e => ({ id: e.id, name: `${r.name} · ${e.state?.attributes?.friendly_name || e.id}` })));
 export const graphCandidates = p => Object.values(p.hass.states).filter(s => domain(s.entity_id) === "sensor" && num(s.state) != null).map(s => s.entity_id).sort();
 export const hoursLabel = n => n % 24 ? t("{n} uur", { n }) : n === 24 ? t("24 uur") : t("{n} dagen", { n: n / 24 });
@@ -134,6 +135,7 @@ export const CARD_TYPES = [
   { id: "presets", group: "panel", label: "Lichtscènes", sub: "opgeslagen lichtstanden van een ruimte", icon: "mdi:lightbulb-group-outline", roomKey: "presets" },
   { id: "claude", group: "panel", label: "Claude Code", sub: "gebruik: sessie en week", icon: "mdi:creation", key: "claude", avail: p => usageAvailable(p, "claude") },
   { id: "chatgpt", group: "panel", label: "ChatGPT", sub: "gebruik: sessie en week", icon: "mdi:chat-processing-outline", key: "chatgpt", avail: p => usageAvailable(p, "chatgpt") },
+  { id: "lamps", group: "panel", label: "Lampen", sub: "tot 4 lampen op één kaart, elk met eigen regelaars", icon: "mdi:lightbulb-group-outline" },
   { id: "group", group: "panel", label: "Groep", sub: "meerdere lampen of stekkers als één kaart", icon: "mdi:shape-outline" },
   { id: "graph", group: "panel", label: "Grafiek", sub: "verloop van een sensor", icon: "mdi:chart-line" },
   { id: "tpl", group: "own", label: "Template", sub: "uit je eigen bibliotheek", icon: "mdi:code-braces" },
@@ -165,7 +167,7 @@ export function addPopup(p, pop) {
 
   if (step === 1) return html`<div class="popup addp nofoot">${head(t("Kaart toevoegen"), t("Welk soort kaart?"))}
     ${GROUPS.map(([g, lbl]) => html`<div class="glbl">${t(lbl)}</div><div class="pages types">${CARD_TYPES.filter(x => x.group === g && (!x.avail || x.avail(p))).map(x => html`
-      <a @click=${() => x.key ? addPanel(x.key) : x.id === "group" ? upd({ step: 2, kind: x.id, gd: { style: "tiles", members: [] } }) : x.id === "graph" ? upd({ step: 2, kind: x.id, gd: { hours: 24 } }) : upd({ step: 2, kind: x.id, q: "" })}><ha-icon icon=${x.icon}></ha-icon><div>${t(x.label)}<small>${t(x.sub)}</small></div></a>`)}</div>`)}
+      <a @click=${() => x.key ? addPanel(x.key) : x.id === "lamps" ? upd({ step: 2, kind: x.id, gd: { style: "lamps", members: [] } }) : x.id === "group" ? upd({ step: 2, kind: x.id, gd: { style: "tiles", members: [] } }) : x.id === "graph" ? upd({ step: 2, kind: x.id, gd: { hours: 24 } }) : upd({ step: 2, kind: x.id, q: "" })}><ha-icon icon=${x.icon}></ha-icon><div>${t(x.label)}<small>${t(x.sub)}</small></div></a>`)}</div>`)}
     </div>`;
 
   if (type?.roomKey && step === 2) {
@@ -175,6 +177,15 @@ export function addPopup(p, pop) {
     return html`<div class="popup addp">${head(t(type.label), t("Van welke ruimte?"))}
       <ul class="ents">${opts.map(o => html`<li class=${classMap({ tap: o.ok && !o.here, dim: !o.ok || o.here })} @click=${() => { if (o.ok && !o.here) addPanel(o.k); }}><ha-icon icon=${type.icon}></ha-icon><div>${o.label}<small>${o.here ? t("staat al op deze pagina") : o.ok ? "" : t("niets beschikbaar")}</small></div><ha-icon icon="mdi:plus"></ha-icon></li>`)}</ul>
       ${foot(backBtn(1))}</div>`;
+  }
+  if (type?.id === "lamps") {
+    const gd = pop.gd || { style: "lamps", members: [] }, g = patch => upd({ gd: { ...gd, ...patch } }), ok = !!(gd.name && gd.members.length), full = gd.members.length >= LAMP_MAX;
+    return html`<div class="popup addp">${head(t("Nieuwe lampenkaart"), t("Eén kaart voor maximaal 4 lampen; tik op de kaart voor alle regelaars"))}
+      <div class="form">
+        ${f(t("Naam"), html`<input type="text" .value=${gd.name || ""} placeholder=${t("bv. Sfeerlampen")} @change=${e => g({ name: e.target.value || undefined })}>`)}
+        ${f(t("Lampen"), html`<div class="chips">${lampCandidates(p).map(c => { const sel = gd.members.includes(c.id); return html`<button class=${sel ? "on" : ""} ?disabled=${!sel && full} @click=${() => g({ members: sel ? gd.members.filter(x => x !== c.id) : [...gd.members, c.id] })}>${c.name}</button>`; })}</div>`, t("{n} van {m} gekozen", { n: gd.members.length, m: LAMP_MAX }))}
+      </div>
+      ${foot(html`<button class="on" ?disabled=${!ok} @click=${() => ok && addMade(p, key, "groups", gd)}>${t("Toevoegen en instellen")}</button>`, backBtn(1))}</div>`;
   }
   if (type?.id === "group") {
     const gd = pop.gd || { style: "tiles", members: [] }, g = patch => upd({ gd: { ...gd, ...patch } }), cands = groupCandidates(p), ok = !!(gd.name && gd.members.length);

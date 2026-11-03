@@ -28,6 +28,8 @@ const SCENARIOS = [
   { name: "phone-rows2", w: 390, h: 844, rows2: true },
 ].filter(s => !only.length || only.includes(s.name));
 const PAGES = ["", "living_room", "kitchen", "bedroom", "dressing_room", "landing", "attic", "test_lab"];   // test_lab: long names, unavailable and awkward cards (?lab)
+// lights cards in every size, with long names and unreachable lights
+const LAB_LAMPS = [["light.floor_lamp", "light.lab_long_on", "light.lab_long_off", "light.lab_unavailable"], ["light.floor_lamp", "light.ceiling_light_living_room", "light.spots_tv_meubel"], ["light.floor_lamp", "light.lab_long_off"], ["light.lab_long_on"], ["light.lab_unavailable"]].map((members, i) => ({ id: "lamps" + i, name: i ? "Lights" : "Lights with a name that is far too long", style: "lamps", room: "test_lab", members }));
 const LAB_VALUES = ["claude", "chatgpt", "sensor.lab_temp", "sensor.lab_long_value", "sensor.lab_text_value", "sensor.lab_unavailable_value"];   // value cards are added by hand to a page
 // the regions of a card; two of them overlapping (or sticking out of the card) is a layout defect, except the pairs listed as allowed
 const REGIONS = [".i", ".c", ".n", ".s", ".lbl", ".ctl", ".socks", ".seg", ".slider", ".vslider", ".rail", ".subc", ".prog", ".spk", ".bat", ".meta", ".gl", ".appi"];
@@ -74,7 +76,7 @@ for (const sc of SCENARIOS) {
   results[sc.name] = {};
   const page = await browser.newPage();
   await page.setViewport({ width: sc.w, height: sc.h, deviceScaleFactor: 1, hasTouch: sc.w < 900 });
-  const user = { setupDone: true, hintSeen: true, pages: Object.fromEntries(PAGES.filter(Boolean).map(r => [r, { ...(sc.rows2 ? { rows: 2 } : {}), ...(r === "test_lab" ? { add: LAB_VALUES } : {}) }])) };
+  const user = { setupDone: true, hintSeen: true, groups: LAB_LAMPS, pages: Object.fromEntries(PAGES.filter(Boolean).map(r => [r, { ...(sc.rows2 ? { rows: 2 } : {}), ...(r === "test_lab" ? { add: LAB_VALUES } : {}) }])) };
   await page.evaluateOnNewDocument(u => { localStorage.setItem("mock:tomte", JSON.stringify(u)); }, user);
   for (const pg of PAGES) {
     await page.goto(`http://localhost:${port}/dev/index.html?shot&nohint&lab&appl2#/${pg}`, { waitUntil: "load", timeout: 60000 });

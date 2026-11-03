@@ -104,13 +104,17 @@ const toggleOrPopup = (p, id, toggle, popup) => pressFor(p, id, toggle, popup);
 export const dot = () => html`<i class="dt"></i>`;
 const Cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 export const ua = () => html`<span class="ua" title=${t("Onbereikbaar")}><ha-icon icon="mdi:alert-circle-outline"></ha-icon></span>`;
+/** the colour a light shines in (rgb or colour temperature), null for plain white */
+function lightRgb(s) {
+  const a = s?.attributes || {}, mode = a.color_mode;
+  if (["hs", "rgb", "xy", "rgbw", "rgbww"].includes(mode) && a.rgb_color) return a.rgb_color;
+  if (mode === "color_temp" && a.color_temp_kelvin) { const k = a.color_temp_kelvin; return k < 3000 ? [255, 190, 120] : k < 4500 ? [255, 225, 190] : [205, 225, 255]; }
+  if (!mode && a.rgb_color) return a.rgb_color;
+  return null;
+}
 /** card background tint for a coloured light (rgb or colour temperature) */
 function lightTint(s) {
-  const a = s?.attributes || {}, mode = a.color_mode;
-  let rgb = null;
-  if (["hs", "rgb", "xy", "rgbw", "rgbww"].includes(mode) && a.rgb_color) rgb = a.rgb_color;
-  else if (mode === "color_temp" && a.color_temp_kelvin) { const k = a.color_temp_kelvin; rgb = k < 3000 ? [255, 190, 120] : k < 4500 ? [255, 225, 190] : [205, 225, 255]; }
-  else if (!mode && a.rgb_color) rgb = a.rgb_color;
+  const rgb = lightRgb(s);
   if (!rgb) return null;
   const [r, g, b] = rgb;
   return `linear-gradient(135deg, rgba(${r},${g},${b},.08), rgba(${r},${g},${b},.08)), rgba(255,255,255,.4)`;
@@ -446,7 +450,8 @@ export function applianceCard(p, a) {
   const foot = [progName, st.power > 0 ? `${Math.round(st.power)} W` : "", applianceMonth(p.hass, a)?.txt || "", a.door && ["open", "on"].includes(p.hass.states[a.door.id]?.state) ? t("Deur open") : ""].filter(Boolean);
   const acts = [];
   if (a.stop && !a.plain && ["running", "waiting"].includes(st.st) && !noRemote(p.hass, a)) acts.push({ icon: "mdi:stop", label: t("Stop"), run: () => p.call("button", "press", { entity_id: a.stop.id }) });
-  if (a.switch && a.op && !unavailable(a.switch.state) && !noRemote(p.hass, a)) acts.push({ icon: "mdi:power", label: isOn(a.switch.state) ? t("Uit") : t("Aan"), on: isOn(a.switch.state), run: () => p.call("switch", "toggle", { entity_id: a.switch.id }) });
+  if (st.klaar) acts.push({ icon: "mdi:check", label: t("Uitgehaald"), run: () => p.call("input_boolean", "turn_off", { entity_id: st.klaar }) });
+  if (a.switch && a.op && !st.klaar && !unavailable(a.switch.state) && !noRemote(p.hass, a)) acts.push({ icon: "mdi:power", label: isOn(a.switch.state) ? t("Uit") : t("Aan"), on: isOn(a.switch.state), run: () => p.call("switch", "toggle", { entity_id: a.switch.id }) });
   if (!a.op && a.power) return plugCard(p, a, st, title, cfg, acts);
   return html`<div class=${classMap({ card: true, appl: acts.length > 0, on: APPLIANCE_ACTIVE.includes(st.st), running: st.st === "running", unavailable: st.st === "unknown" })}
       ${pressDir(p, { tap: () => p.openPopup({ type: "appliance", a }), hold: () => p.openPopup({ type: "appliance", a }) })}>
@@ -693,6 +698,7 @@ export function findCard(p, key, exceptPage) {
 export function homeCards(p, h) {
   const cards = [], add = (key, label, tpl) => cards.push({ key, label, tpl });
   if (h.climate) add("climate", t("Thermostaat"), climateCard(p, h.climate));
+  for (const k of carIds(p.hass)) add("car:" + k, carTitle(p, k), carCard(p, k));
   // media players that are playing or paused (two at most), unless switched off in the settings
   if (p.config.home?.mediaHome !== false) for (const m of p.rooms.flatMap(r => r.ents.media).filter(e => ["playing", "paused"].includes(e.state?.state) && !isHidden(p, e.id)).slice(0, 2)) add(m.id, label(p, m), mediaCard(p, m));
   if (h.attention.length) add("attention", t("Aandacht"), html`<div class="card list" ${pressDir(p, { tap: () => p.openPopup({ type: "attention" }) })}>
@@ -773,12 +779,65 @@ export function groupCard(p, g) {
   const all = () => { for (const x of m) p.call(svcFor(x.id), any ? "turn_off" : "turn_on", { entity_id: x.id }); };
   const popup = () => p.openPopup({ type: "group", g });
   const style = cfg.style || g.style || "tiles";
+  if (style === "lamps") return lampsCard(p, g, id, cfg, popup);
   return html`<div class=${classMap({ card: true, group: true, [style]: true, on: any, ...infoCls(cfg) })} ${pressDir(p, pressFor(p, id, cfg.tap === "toggle" ? all : null, popup))}>
     <div class="i">${ico(g.icon || "mdi:shape-outline", g.icon ? null : "shapes")}</div>
     <div class="c">${ovr(p, id, "state") ?? (any ? t("{n} van {m} aan", { n: on, m: m.length }) : t("Alles uit"))}</div>
     <div class="n">${cfg.name || g.name}</div>
     ${style === "list" ? html`<div class="s glist">${m.slice(0, 4).map(x => html`<div class=${classMap({ on: x.on })}><i></i>${ico(null, memberIcon(x.id))}<span>${x.name}</span><b>${x.on ? t("Aan") : t("Uit")}</b></div>`)}</div>`
       : html`<div class="s gtiles" @click=${ev => ev.stopPropagation()}>${m.slice(0, 5).map(x => html`<button class=${classMap({ on: x.on })} title=${x.name} @click=${toggleOne(x)}>${ico(null, memberIcon(x.id))}<small>${x.name}</small></button>`)}</div>`}
+  </div>`;
+}
+/* ---------- lamp group: a section per light on the card; tapping opens the popup with every light's controls ---------- */
+export const LAMP_MAX = 4;
+export const lampMembers = (p, g) => groupMembers(p, g).filter(x => x.id.startsWith("light.")).slice(0, LAMP_MAX);
+function lampsCard(p, g, id, cfg, popup) {
+  const m = lampMembers(p, g), on = m.filter(x => x.on).length, title = cfg.name || g.name;
+  const all = () => { for (const x of m) p.call("light", on ? "turn_off" : "turn_on", { entity_id: x.id }); };
+  const press = pressDir(p, pressFor(p, id, cfg.tap === "toggle" ? all : null, popup));
+  if (m.every(x => unavailable(x.s))) return html`<div class="card group unavailable" ${press}>${ua()}<div class="n">${title}</div><div class="s">${t("Onbereikbaar")}</div></div>`;
+  return html`<div class=${classMap({ card: true, group: true, lamps: true, on: on > 0 })} aria-label=${title} ${press}>
+    <div class=${classMap({ s: true, ["l" + m.length]: true })}>${m.map(x => lampSection(p, x))}</div>
+  </div>`;
+}
+function lampSection(p, x) {
+  const un = unavailable(x.s), dim = lightCaps(x.s).dim, pct = x.on ? Math.round((x.s.attributes.brightness || 255) / 2.55) : 0;
+  const rgb = x.on && !cardCfg(p, x.id).noColor ? lightRgb(x.s) : null;
+  return html`<div class=${classMap({ lsec: true, on: x.on, un })} style="--v:${dim ? pct : 0}%${rgb ? `;--lc:rgb(${rgb.join(",")})` : ""}">
+    <span class="li">${icoFor(p, x.id, "mdi:lightbulb-outline", lightIcon(x.s))}</span>
+    <em>${un ? t("Onbereikbaar") : x.on ? (dim ? `${pct}%` : t("Aan")) : t("Uit")}</em>
+    <b>${x.name}</b><i></i>
+  </div>`;
+}
+
+/* ---------- electric car (Stellantis Vehicles): the time left while it charges, otherwise the battery ---------- */
+/** the cars in Home Assistant, by the part of their entity ids before the sensor name (the VIN) */
+const carIds = hass => Object.keys(hass.states).filter(id => id.startsWith("sensor.") && id.endsWith("_battery_charging_end")).map(id => id.slice(7, -21));
+/** the card's name: the device is called after its VIN until someone renames it */
+function carTitle(p, k) {
+  const dev = p.hass.entities?.[`sensor.${k}_battery`]?.device_id, nm = dev ? deviceName(p.hass, dev) : "";
+  return cardCfg(p, "car:" + k).name || (nm && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(nm) ? nm : t("Elektrische auto"));
+}
+function carCard(p, k) {
+  const key = "car:" + k, cfg = cardCfg(p, key), title = carTitle(p, k), sens = x => p.hass.states[`sensor.${k}_${x}`], flag = x => p.hass.states[`binary_sensor.${k}_${x}`]?.state === "on";
+  const press = pressDir(p, pressFor(p, key, null, () => p.moreInfo(`sensor.${k}_battery`)));
+  if (unavailable(sens("battery"))) return html`<div class="card car unavailable" ${press}>${ua()}<div class="n">${title}</div><div class="s">${t("Onbereikbaar")}</div></div>`;
+  const batt = num(sens("battery").state), range = num(sens("range")?.state), charging = flag("battery_charging"), plugged = flag("battery_plugged"), moving = flag("moving");
+  // the end time only means something during a charge: it stays behind on the sensor afterwards
+  const end = charging ? new Date(sens("battery_charging_end")?.state) : null, left = end > Date.now() ? Math.ceil((end - Date.now()) / 60000) : null;
+  const corner = charging ? html`<i></i>${t("Laden")}` : plugged ? t("Ingeplugd") : moving ? t("Onderweg") : p.hass.states[`device_tracker.${k}_vehicle`]?.state === "home" ? t("Thuis") : t("Weg");
+  const km = range != null ? `${Math.round(range)} km` : "";
+  const line = charging ? [left != null ? t("Klaar om {t}", { t: end.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) }) : "", left != null ? `${batt}%` : "", km]
+    : plugged ? [km && t("{km} bereik", { km }), t("laadt niet")]
+    : [km && t("{km} bereik", { km }), moving ? "" : flag("doors") ? t("niet op slot") : t("op slot")];
+  return html`<div class=${classMap({ card: true, hero: true, car: true, on: charging, ...infoCls(cfg) })} ${press}>
+    <div class="i">${ico(cfg.icon || "mdi:car-electric-outline")}</div>
+    <div class="c">${ovr(p, key, "state") ?? corner}</div>
+    <div class=${classMap({ s: true, big: true, carleft: left != null })}>${left != null ? html`${left >= 60 ? html`${Math.floor(left / 60)}<small>${t("u")}</small>` : nothing}${left % 60}<small>m</small>` : html`${batt ?? "–"}<small>%</small>`}</div>
+    <div class="n">${title}</div>
+    <div class="lbl"><span>${ovr(p, key, "label") ?? line.filter(Boolean).join(" · ")}</span></div>
+    <div class="carupd">${t("Bijgewerkt {t}", { t: relTime(sens("battery").attributes["Last updated"] || sens("battery").last_updated) })}</div>
+    <div class="carbar" style="--v:${batt ?? 0}%"><i></i></div>
   </div>`;
 }
 

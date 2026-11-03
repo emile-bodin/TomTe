@@ -80,7 +80,9 @@ Each card in [Cards](cards.md) and the modifier classes that give it its layout.
 | Light scenes | `scenes`, `presets` | same as scenes; the presets popup saves and recalls the room's lights |
 | Energy | base | base |
 | Group | `group`, `tiles` or `list` | chip tiles or member rows in `.s` |
+| Lights | `group`, `lamps` | no icon, title or corner: `.s` covers the whole card edge to edge, one section per light in quarters (three lights: the first takes the top row) |
 | Graph | `graph` | line band between icon and name (`--gl-*`) |
+| Electric car | `car`, `hero` | big value above the name; `--rr` holds the battery bar on the right, `--reserve` the update line under the bottom line |
 | Verbruik | `costs` | power in the corner, a column each for electricity and gas in the bottom-line row (`--lh` = the height of the columns), the name directly above them; on low cards and in compact only this month's use, with `.s` saying so |
 | Claude Code, ChatGPT | `usage` | session time left in the corner, notice in the status line (amber), two meters in the bottom-line row (`--lh` = two meter rows `--um`, `--reserve` 0); amber from 70 %, red from 90 %; in compact the status line goes |
 | Template | the base card of the entity it is placed on | text, label and visibility come from Jinja; the layout is the base's |
@@ -104,6 +106,8 @@ These differ on purpose; each is a modifier class with its own rules:
 - **Door, window and motion cards with the graph bottom:** the same line band as the graph card, stepping between off and on over 24 hours; today's total sits on the bottom line.
 - **Graph:** a line band between the icon and the name; in compact the band shrinks and the average line goes; on a wide screen the average line goes under 200px and the period text under 160px.
 - **Lists, scenes, groups, people:** their inner layout (`.s` as a list, tiles) stays; only tile height and gaps follow the tokens.
+- **Lights card:** the title sits in the icon's row because every section has its own icon. A section drops its icon, then its state, when its height can't hold them; the brightness bar stays.
+- **Electric car:** the battery bar starts under the corner state, so `--rc` stays 0 and the corner keeps its place. The time left is smaller than the hero value of other cards, and the name is one line, because the update line takes the room.
 - **Unavailable:** a centred three-row card without controls.
 - **Camera:** name and state anchored at the bottom over a gradient.
 - **Litter box:** its own card (`litterCard`), not a strip with a modifier: the same slots, a cat icon, the state (weight, cleaning, bin full) as corner text, the active modes in the status line, and every switch as an icon button in the bottom-line row (`--lh` and `--bh-sock` are `--bh`, `--reserve` is 0), so name and status keep the height of the other cards. Icon-only at every width; a one-line title.

@@ -56,7 +56,7 @@ export function idleScreen(p) {
     <div class="iline">${[h?.temp != null ? t("{t}° binnen", { t: h.temp.toFixed(1) }) : "", h?.lightsOn?.length ? t("{n} lampen aan", { n: h.lightsOn.length }) : "", h?.doorsOpen?.length ? t("{n} deur open", { n: h.doorsOpen.length }) : "", h?.attention?.length ? t("{n} meldingen", { n: h.attention.length }) : ""].filter(Boolean).join(" · ")}</div>
     ${p.rooms.flatMap(r => r.ents.appliances).filter(a => !a.plain && !isHidden(p, a.id) && /^mdi:(washing-machine|tumble-dryer)$/.test(applianceIcon(cardCfg(p, a.id).name || deviceName(p.hass, a.device)))).map(a => {
       const c = cardCfg(p, a.id), st = applianceState(p.hass, a, c.threshold ?? 5), name = c.name || deviceName(p.hass, a.device);
-      return ["running", "waiting"].includes(st.st) ? { icon: c.icon || applianceIcon(name), name, label: st.label, left: applianceEnd(st) } : null;
+      return ["running", "waiting", "done"].includes(st.st) ? { icon: c.icon || applianceIcon(name), name, label: st.label, left: applianceEnd(st) } : null;
     }).filter(Boolean).map(x => html`<div class="iwx"><ha-icon icon=${x.icon}></ha-icon>${[x.name, x.label, x.left].filter(Boolean).join(" · ")}</div>`)}
   </div>`;
 }

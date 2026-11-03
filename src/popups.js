@@ -6,12 +6,12 @@ import { name, deviceName } from "./model.js";
 import { pagesFor } from "./pages.js";
 import { keypad, bars } from "./extras.js";
 import { eventWhen, timeline, applianceState, applianceMonth, noRemote } from "./extras2.js";
-import { dishHelper, litterBox, wasteColor, wasteWhen, condText, condSvg, label, camStream, attFilter, ATT_FILTERS, mediaView, lightCaps, batteryOf, groupMembers, cardType } from "./cards.js";
+import { dishHelper, litterBox, wasteColor, wasteWhen, condText, condSvg, label, camStream, attFilter, ATT_FILTERS, mediaView, lightCaps, batteryOf, groupMembers, lampMembers, lightCard, LAMP_MAX, cardType } from "./cards.js";
 import { roomPresets, snapshot, applyPreset, presetMatches, installUpdate, pendingUpdates } from "./features.js";
 import { modeList, toggleMode } from "./extras3.js";
 import { field, text, select, check } from "./settings.js";
 import { LANGUAGES } from "./i18n.js";
-import { addPopup, canEdit, isBuiltin, TPL_ASK, groupCandidates, graphCandidates, hoursLabel } from "./edit.js";
+import { addPopup, canEdit, isBuiltin, TPL_ASK, groupCandidates, lampCandidates, graphCandidates, hoursLabel } from "./edit.js";
 import { templateOf } from "./cards.js";
 import { GRAPH_HOURS } from "./graph.js";
 import { usagePopup, USAGE_PROVIDERS } from "./usage.js";
@@ -95,7 +95,7 @@ const wrap = (title, big, sub, body) => {
   if (form) { body = cardForm(p, pop); title = html`<span>${t("Kaart instellen")}<span class="rm"> · ${title}</span></span>`; sub = t("Zo ziet de kaart eruit met deze instellingen"); }
   // .pw: the popup plus its ••• menu; a click anywhere in it (outside the menu) closes the menu
   const full = pop.type === "people";                        // fills the screen around its map
-  return html`<div class=${full ? "pw full" : "pw"} @click=${() => { if (pop.menu) p.openPopup({ ...pop, menu: false }); }}><div class=${form ? "popup wide cardf" : full ? "popup full" : "popup"}><h2>${title} ${hbtns(p, pop)}</h2><div class="big">${big}</div><div class="sub">${sub}</div>${body}</div>${pop.menu && entityOf(pop) ? optionsMenu(p, pop) : nothing}</div>`;
+  return html`<div class=${full ? "pw full" : "pw"} @click=${() => { if (pop.menu) p.openPopup({ ...pop, menu: false }); }}><div class=${form ? "popup wide cardf" : full ? "popup full" : pop.g?.style === "lamps" && lampMembers(p, pop.g).length > 1 ? "popup lamps" : "popup"}><h2>${title} ${hbtns(p, pop)}</h2><div class="big">${big}</div><div class="sub">${sub}</div>${body}</div>${pop.menu && entityOf(pop) ? optionsMenu(p, pop) : nothing}</div>`;
 };
 /** a switch whose device also has a power sensor or an operation-state sensor can be shown as an appliance (bezig / klaar) */
 const applianceCapable = (p, id) => { const dev = p.hass.entities?.[id]?.device_id; return !!dev && Object.values(p.hass.entities).some(e => e.device_id === dev && e.entity_id !== id && (p.hass.states[e.entity_id]?.attributes.device_class === "power" || p.hass.states[e.entity_id]?.attributes.unit_of_measurement === "W" || e.translation_key === "operation_state" || /_operation_state$|^sensor\..*_machine_state$/.test(e.entity_id))); };
@@ -158,7 +158,9 @@ function cardForm(p, pop) {
     <div class="form">
       <div class="grp">${sh(t("Weergave"))}
         ${builtin && !gd ? row(t("Kaart van het paneel"), html`<span class="note">${t("Naam en inhoud volgen de instellingen van het paneel; hieronder kun je de kaart op voorwaarde verbergen.")}</span>`) : nothing}
-        ${grp ? html`${row(t("Naam"), html`<div class="two"><input type="text" .value=${gd.name || ""} @change=${e => gupd({ name: e.target.value || undefined })}><input type="text" .value=${gd.icon || ""} placeholder="mdi:shape-outline" @change=${e => gupd({ icon: e.target.value || undefined })}></div>`)}
+        ${grp && gd.style === "lamps" ? html`${row(t("Naam"), html`<input type="text" .value=${gd.name || ""} @change=${e => gupd({ name: e.target.value || undefined })}>`)}
+          ${row(t("Lampen"), html`<div class="chips">${lampCandidates(p).map(c => { const sel = (gd.members || []).includes(c.id), full = (gd.members || []).length >= LAMP_MAX; return html`<button class=${sel ? "on" : ""} ?disabled=${!sel && full} @click=${() => gupd({ members: sel ? gd.members.filter(x => x !== c.id) : [...(gd.members || []), c.id] })}>${c.name}</button>`; })}</div>`, t("{n} van {m} gekozen", { n: (gd.members || []).length, m: LAMP_MAX }))}` : nothing}
+        ${grp && gd.style !== "lamps" ? html`${row(t("Naam"), html`<div class="two"><input type="text" .value=${gd.name || ""} @change=${e => gupd({ name: e.target.value || undefined })}><input type="text" .value=${gd.icon || ""} placeholder="mdi:shape-outline" @change=${e => gupd({ icon: e.target.value || undefined })}></div>`)}
           ${row(t("Stijl"), html`<div class="seg">${[["tiles", t("tegels (tikken schakelt)")], ["list", t("lijst")]].map(([v, l]) => html`<button class=${(gd.style || "tiles") === v ? "on" : ""} @click=${() => gupd({ style: v })}>${l}</button>`)}</div>`)}
           ${row(t("Onderdelen"), html`<div class="chips">${groupCandidates(p).map(c => html`<button class=${(gd.members || []).includes(c.id) ? "on" : ""} @click=${() => gupd({ members: (gd.members || []).includes(c.id) ? gd.members.filter(x => x !== c.id) : [...(gd.members || []), c.id] })}>${c.name}</button>`)}</div>`, t("{n} gekozen", { n: (gd.members || []).length }))}` : nothing}
         ${grf ? html`${row(t("Sensor"), html`<input type="text" list="hcn-numeric" .value=${gd.entity || ""} placeholder="sensor.x" @change=${e => gupd({ entity: e.target.value || undefined })}><datalist id="hcn-numeric">${graphCandidates(p).map(x => html`<option value=${x}></option>`)}</datalist>`)}
@@ -223,6 +225,25 @@ function cardForm(p, pop) {
   </div></div>`;
 }
 
+/** every control of one light: on/off, brightness, colour, saturation, colour temperature (the light popup and each section of a lamp group) */
+function lightControls(p, id, s) {
+  const on = isOn(s), pct = on ? Math.round((s.attributes.brightness || 255) / 2.55) : 0;
+  const kelvin = s.attributes.color_temp_kelvin, kmin = s.attributes.min_color_temp_kelvin || 2000, kmax = s.attributes.max_color_temp_kelvin || 6500;
+  const modesList = s.attributes.supported_color_modes || [];
+  const dim = modesList.some(m => m !== "onoff"), ct = modesList.includes("color_temp"), color = modesList.some(m => ["hs", "rgb", "xy", "rgbw", "rgbww"].includes(m));
+  const set = data => p.call("light", "turn_on", { entity_id: id, ...data });
+  const hs = s.attributes.hs_color || [0, 0], inColor = ["hs", "rgb", "xy", "rgbw", "rgbww"].includes(s.attributes.color_mode);
+  const SW = [[t("Rood"), 0], [t("Oranje"), 30], [t("Geel"), 55], [t("Groen"), 120], [t("Blauw"), 225], [t("Paars"), 280], [t("Roze"), 330]];
+  return html`
+        ${modes([{ label: on ? t("Uitschakelen") : t("Inschakelen"), on, go: () => p.call("light", "toggle", { entity_id: id }) }], "n2")}
+        ${dim ? range(t("Helderheid"), pct, v => set({ brightness_pct: v })) : nothing}
+        ${color ? html`<div class="prow"><span>${t("Kleur")}</span><b>${inColor ? `${Math.round(hs[0])}°` : "–"}</b><input type="range" class="hue" min="0" max="360" .value=${String(Math.round(hs[0]))} @change=${e => set({ hs_color: [+e.target.value, Math.max(hs[1] || 0, 60)] })}></div>
+          <div class="swatches">${SW.map(([n, h]) => html`<button title=${n} class=${inColor && Math.abs(hs[0] - h) < 12 ? "on" : ""} style="background:hsl(${h} 90% 55%)" @click=${() => set({ hs_color: [h, 100] })}></button>`)}<button title=${t("Wit")} class=${!inColor ? "on" : ""} style="background:#fff" @click=${() => ct ? set({ color_temp_kelvin: 4000 }) : set({ hs_color: [0, 0] })}></button></div>
+          ${range(t("Verzadiging"), Math.round(hs[1] || 0), v => set({ hs_color: [hs[0], v] }))}` : nothing}
+        ${ct ? html`<div class="prow"><span>${t("Kleurtemperatuur")}</span><b>${kelvin ? kelvin + " K" : "–"}</b><input type="range" class="ct" min=${kmin} max=${kmax} .value=${String(kelvin || kmin)} @change=${e => set({ color_temp_kelvin: +e.target.value })}></div>` : nothing}
+        ${ct ? modes([{ label: t("Warm"), on: !inColor && kelvin && kelvin < 3200, go: () => set({ color_temp_kelvin: Math.max(kmin, 2700) }) }, { label: t("Neutraal"), on: !inColor && kelvin >= 3200 && kelvin < 4800, go: () => set({ color_temp_kelvin: 4000 }) }, { label: t("Koel"), on: !inColor && kelvin >= 4800, go: () => set({ color_temp_kelvin: Math.min(kmax, 5500) }) }], "n3") : nothing}`;
+}
+
 export function renderPopup(p, pop) {
   CUR = { p, pop };
   const hass = p.hass, home = p.home, roomName = p.room?.name || t("Thuis");
@@ -230,20 +251,9 @@ export function renderPopup(p, pop) {
     case "light": {
       const s = hass.states[pop.e.id] || pop.e.state, on = isOn(s), un = unavailable(s);
       const pct = on ? Math.round((s.attributes.brightness || 255) / 2.55) : 0;
-      const kelvin = s.attributes.color_temp_kelvin, kmin = s.attributes.min_color_temp_kelvin || 2000, kmax = s.attributes.max_color_temp_kelvin || 6500;
-      const modesList = s.attributes.supported_color_modes || [];
-      const dim = modesList.some(m => m !== "onoff"), ct = modesList.includes("color_temp"), color = modesList.some(m => ["hs", "rgb", "xy", "rgbw", "rgbww"].includes(m));
-      const set = data => p.call("light", "turn_on", { entity_id: pop.e.id, ...data });
-      const hs = s.attributes.hs_color || [0, 0], inColor = ["hs", "rgb", "xy", "rgbw", "rgbww"].includes(s.attributes.color_mode);
-      const SW = [[t("Rood"), 0], [t("Oranje"), 30], [t("Geel"), 55], [t("Groen"), 120], [t("Blauw"), 225], [t("Paars"), 280], [t("Roze"), 330]];
+      const dim = lightCaps(s).dim;
       return wrap(roomName, label(p, pop.e), un ? t("Onbereikbaar") : on ? (dim ? `${t("Aan")} · ${pct}%` : t("Aan")) : t("Uit"), html`
-        ${modes([{ label: on ? t("Uitschakelen") : t("Inschakelen"), on, go: () => p.call("light", "toggle", { entity_id: pop.e.id }) }], "n2")}
-        ${dim ? range(t("Helderheid"), pct, v => set({ brightness_pct: v })) : nothing}
-        ${color ? html`<div class="prow"><span>${t("Kleur")}</span><b>${inColor ? `${Math.round(hs[0])}°` : "–"}</b><input type="range" class="hue" min="0" max="360" .value=${String(Math.round(hs[0]))} @change=${e => set({ hs_color: [+e.target.value, Math.max(hs[1] || 0, 60)] })}></div>
-          <div class="swatches">${SW.map(([n, h]) => html`<button title=${n} class=${inColor && Math.abs(hs[0] - h) < 12 ? "on" : ""} style="background:hsl(${h} 90% 55%)" @click=${() => set({ hs_color: [h, 100] })}></button>`)}<button title=${t("Wit")} class=${!inColor ? "on" : ""} style="background:#fff" @click=${() => ct ? set({ color_temp_kelvin: 4000 }) : set({ hs_color: [0, 0] })}></button></div>
-          ${range(t("Verzadiging"), Math.round(hs[1] || 0), v => set({ hs_color: [hs[0], v] }))}` : nothing}
-        ${ct ? html`<div class="prow"><span>${t("Kleurtemperatuur")}</span><b>${kelvin ? kelvin + " K" : "–"}</b><input type="range" class="ct" min=${kmin} max=${kmax} .value=${String(kelvin || kmin)} @change=${e => set({ color_temp_kelvin: +e.target.value })}></div>` : nothing}
-        ${ct ? modes([{ label: t("Warm"), on: !inColor && kelvin && kelvin < 3200, go: () => set({ color_temp_kelvin: Math.max(kmin, 2700) }) }, { label: t("Neutraal"), on: !inColor && kelvin >= 3200 && kelvin < 4800, go: () => set({ color_temp_kelvin: 4000 }) }, { label: t("Koel"), on: !inColor && kelvin >= 4800, go: () => set({ color_temp_kelvin: Math.min(kmax, 5500) }) }], "n3") : nothing}
+        ${lightControls(p, pop.e.id, s)}
         <ul>${li("mdi:history", on ? t("Aan sinds") : t("Uit sinds"), relTime(s.last_changed))}${s.attributes.brightness ? li("mdi:brightness-6", t("Helderheid"), `${pct}%`) : nothing}</ul>`);
     }
     case "strip": {
@@ -600,6 +610,12 @@ export function renderPopup(p, pop) {
         </div></div>`;
     }
     case "group": {
+      if (pop.g.style === "lamps") {
+        const m = lampMembers(p, pop.g), n = m.filter(x => x.on).length;
+        return wrap(pop.g.name, n ? t("{n} van {m} aan", { n, m: m.length }) : t("Alles uit"), t("tik op een lamp om te schakelen, houd vast voor alle regelaars"), html`
+          <div class="modes n2"><button @click=${() => m.forEach(x => p.call("light", "turn_on", { entity_id: x.id }))}>${t("Alles aan")}</button><button @click=${() => m.forEach(x => p.call("light", "turn_off", { entity_id: x.id }))}>${t("Alles uit")}</button></div>
+          <div class="lampcards">${m.map(x => lightCard(p, { id: x.id, state: x.s }))}</div>`);
+      }
       const g = pop.g, m = groupMembers(p, g), on = m.filter(x => x.on).length;
       const svc = id => id.split(".")[0] === "input_boolean" ? "input_boolean" : id.split(".")[0] === "light" ? "light" : id.split(".")[0] === "fan" ? "fan" : "switch";
       return wrap(g.name, on ? t("{n} van {m} aan", { n: on, m: m.length }) : t("Alles uit"), t("tik op een onderdeel om te schakelen"), html`

@@ -204,7 +204,28 @@ export function makeHass(onChange) {
   add("sensor.gas_meter", null, "8836.7", { friendly_name: "Gas meter", unit_of_measurement: "m³" });
   add("automation.night_mode", null, "unavailable", { friendly_name: "Night mode" });
 
+  // electric cars (Stellantis Vehicles): the entities of the real integration, one car per state of the card
+  const car = (k, nm, { batt, range, charging = "off", plugged = "off", moving = "off", doors = "off", tracker = "home", endIn = 0 }) => {
+    const device = dev("dev_car_" + k, null); devices[device].name = nm;
+    add(`sensor.${k}_battery`, null, batt, { device_class: "battery", unit_of_measurement: "%", "Last updated": new Date(Date.now() - 8 * 60000).toISOString() }, { device });
+    add(`sensor.${k}_range`, null, range, { device_class: "distance", unit_of_measurement: "km" }, { device });
+    add(`sensor.${k}_battery_charging_end`, null, new Date(Date.now() + endIn * 60000).toISOString(), { device_class: "timestamp" }, { device });
+    add(`binary_sensor.${k}_battery_charging`, null, charging, { device_class: "battery_charging" }, { device });
+    add(`binary_sensor.${k}_battery_plugged`, null, plugged, { device_class: "plug" }, { device });
+    add(`binary_sensor.${k}_moving`, null, moving, { device_class: "moving" }, { device });
+    add(`binary_sensor.${k}_doors`, null, doors, { device_class: "lock" }, { device });
+    add(`device_tracker.${k}_vehicle`, null, tracker, {}, { device });
+  };
+  car("vr3ukzkw8rj000001", "VR3UKZKW8RJ000001", { batt: "26", range: "72", charging: "on", plugged: "on", tracker: "not_home", endIn: 236 });
+
   if (LAB) {   // long names, unavailable devices, every kind of card in its awkward states
+    car("lab_car_short", "Korte laadbeurt", { batt: "91", range: "260", charging: "on", plugged: "on", endIn: 12 });
+    car("lab_car_noend", "Laadt zonder eindtijd", { batt: "40", range: "115", charging: "on", plugged: "on", endIn: -30 });
+    car("lab_car_plugged", "Ingeplugd", { batt: "80", range: "230", plugged: "on" });
+    car("lab_car_parked", "Geparkeerd", { batt: "64", range: "185" });
+    car("lab_car_moving", "Onderweg", { batt: "58", range: "165", moving: "on", tracker: "not_home" });
+    car("lab_car_long", "A very long name that has to be clamped to two lines without pushing anything over the controls", { batt: "100", range: "1000", charging: "on", plugged: "on", endIn: 1439 });
+    car("lab_car_down", "Onbereikbare auto", { batt: "unavailable", range: "unavailable" });
     const L = "A very long name that has to be clamped to two lines without pushing anything over the controls";
     add("light.lab_long_on", "test_lab", "on", { friendly_name: L, brightness: 140, supported_color_modes: ["brightness"] });
     add("light.lab_long_off", "test_lab", "off", { friendly_name: L, supported_color_modes: ["onoff"] });

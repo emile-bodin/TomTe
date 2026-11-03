@@ -37,6 +37,11 @@ const cardCompact = (all, compact) => `
   ${compact} .card .n{font-size:14px}
   ${compact} .card .s{font-size:11px;margin-top:2px}
   ${compact} .card .s.big{font-size:22px;letter-spacing:-1px}
+  ${compact} .card.car{--reserve:11px}
+  ${compact} .card.car .carupd{font-size:9px;line-height:11px}
+  ${compact} .card.car .s.big small{font-size:12px;margin:0 3px 0 1px}
+  ${compact} .card.car .s.big.carleft{font-size:18px;letter-spacing:-.6px}
+  ${compact} .card.car .s.big.carleft small{font-size:11px}
   ${compact} .card .lbl{font-size:9px;letter-spacing:1.4px}
   ${compact} .card .lbl.steps button{padding:0 8px;font-size:9px}
   ${compact} .card .lbl.bars{padding-top:6px}
@@ -465,6 +470,34 @@ export const styles = css`
   .card.group .glist div span{overflow:hidden;text-overflow:ellipsis}
   .card.group .glist div b{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--fg-3);flex:none}
   .card.group .glist div.on b{color:#fff}
+  /* lamp group: the title takes the icon's row, the sections fill the rest; each section drops what its height can't hold */
+  .card.lamps .s{grid-area:auto;position:absolute;inset:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:1px;white-space:normal;overflow:hidden}
+  .card.lamps .s.l1{grid-template-columns:minmax(0,1fr)}
+  .card.lamps .s.l3 .lsec:first-child{grid-column:1 / 3}
+  .card.lamps .lsec{container-type:size;position:relative;overflow:hidden;min-width:0;min-height:0;box-sizing:border-box;padding:0 10px;display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-areas:"li st" "nm nm";align-content:space-evenly;align-items:center;background:rgba(255,255,255,.1);color:#fff}
+  .card.lamps .lsec.on{background:rgba(255,255,255,.9);color:#1d1d1f}
+  .card.lamps .lsec.un{background:none;color:var(--fg-3)}
+  .card.lamps .lsec .li{grid-area:li;display:flex;line-height:0}
+  .card.lamps .lsec .li img.ico{width:20px;height:20px}
+  .card.lamps .lsec .li ha-icon{--mdc-icon-size:20px}
+  .card.lamps .lsec.on .li img.ico{filter:invert(1)}
+  .card.lamps .lsec em{grid-area:st;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;opacity:.75}
+  .card.lamps .lsec b{grid-area:nm;color:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card.lamps .lsec i{position:absolute;left:0;bottom:0;height:3px;width:var(--v,0%);background:var(--lc,rgba(0,0,0,.5))}
+  @container (max-width:120px){ .card.lamps .lsec b{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.15} .card.lamps .lsec.un .li{display:none} .card.lamps .lsec.un em{grid-column:1 / -1} }
+  @container (max-height:54px){ .card.lamps .lsec .li{display:none} }
+  @container (max-height:36px){ .card.lamps .lsec em{display:none} .card.lamps .lsec b{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.15} }
+  /* electric car: the big value above its name, the battery as a vertical bar on the right edge, below the corner state */
+  .card.car{--rr:calc(var(--vs-w) + var(--gut));--reserve:14px}
+  .card.car .n{-webkit-line-clamp:1}
+  .card.car .carupd{position:absolute;left:var(--cp);right:calc(var(--cp) + var(--rr));bottom:var(--cp);font-size:10px;font-weight:500;line-height:12px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card.car .s.big small{font-size:16px;font-weight:600;letter-spacing:0;color:var(--fg-2);margin:0 5px 0 2px}
+  .card.car .s.big.carleft{font-size:28px;letter-spacing:-1.2px}
+  .card.car .s.big.carleft small{font-size:14px}
+  .card.car .c i{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:7px;animation:blink 1.4s ease-in-out infinite}
+  .card.car .carbar{position:absolute;top:calc(var(--cp) + var(--ib) + var(--bg));bottom:var(--cp);right:var(--cp);width:var(--vs-w);border-radius:999px;background:rgba(255,255,255,.22);overflow:hidden}
+  /* the gradient spans the whole bar and the battery level reveals it, so a low battery only shows the red end */
+  .card.car .carbar i{position:absolute;inset:0;background:linear-gradient(to top,#e5484d,var(--accent) 50%,#4cc38a);clip-path:inset(calc(100% - var(--v)) 0 0 0)}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
   .empty{position:absolute;left:var(--pad);bottom:120px;font-size:14px;opacity:.6}
 
@@ -633,6 +666,12 @@ export const styles = css`
   input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:#fff;cursor:pointer}
   input[type=range].hue{background:linear-gradient(to right,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%)}
   input[type=range].ct{background:linear-gradient(to right,#ffb46e,#fff2e0,#cfe3ff)}
+  .popup.lamps{width:min(calc(2 * var(--card-w) + 72px),calc(100vw - 32px));max-width:none}
+  .popup .lampcards{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--card-gap);margin-top:14px}
+  .popup.lamps .lampcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .popup .lampcards .card{animation:none;width:100%;height:var(--card-h)}
+  .popup .lampcards .card.vs{margin:0;opacity:1;font-size:inherit}
+  @media (max-width:700px){ .popup.lamps .lampcards{grid-template-columns:minmax(0,1fr)} }
   .popup .swatches{display:flex;gap:8px;margin-top:14px}
   .popup .swatches button{flex:1;height:34px;border:0;border-radius:999px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
   .popup .swatches button.on{box-shadow:inset 0 0 0 3px #fff}

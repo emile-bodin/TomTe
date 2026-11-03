@@ -104,6 +104,8 @@ automation:
           option: "{{ 'vuil' if trigger.id == 'laden' else trigger.id }}"
 ```
 
+**Washer and dryer on LocalThings.** These machines report *idle* straight after a cycle, exactly as after a stop, so the card cannot tell that the laundry is done by itself. Add a helper named after the Dutch name (`input_boolean.wasmachine_klaar`, `input_boolean.droger_klaar`) and an automation that switches it on when `sensor.…_progress` becomes `finish` and off when `sensor.…_machine_state` becomes `active`. While it is on, the card shows *Klaar* with an *Uitgehaald* button that switches it off, and the machine also shows on the home page and the idle screen. The card only reads the helper; the phone notification belongs in the same automation.
+
 When one machine is in the same room through two integrations, for example SmartThings and LocalThings, you get one card: the integration that reports the most. The month totals on the card come from sensors named after the Dutch name (`sensor.vaatwasser_cycli_maand`, `_energie_maand`, `_kosten_maand`; `sensor.wasmachine_…` and `sensor.droger_…` for the washer and dryer), also when the device is called *SIEMENS Dishwasher* or *Samsung Washer*. Home Connect Local reports the time left as a duration (hours) and not as a finish time; the card works out the finish time from it.
 
 **Dishwasher popup.** Tapping a dishwasher opens a popup with everything the machine offers, as far as the integration exposes it (tested with Home Connect Local): **Dishes** (clean, dirty or empty, when a helper with those three options exists), the **programme** as a row of buttons (read-only while it runs), the **options** of the cycle (half load, Hygiene Plus, intensive zone, VarioSpeed Plus, quiet …), **delay start** in hours (set it, then press Start), **notices** the machine reports (filter, AquaStop, calcified heater …), **maintenance** (salt, rinse aid, MachineCare, number of cycles, Wi-Fi strength or connection) and the machine's own **settings** (child lock, water hardness, rinse-aid dosing, water connection). Start and Stop are at the top. A section that the integration does not offer is left out.
@@ -237,9 +239,17 @@ A live snapshot that refreshes every few seconds without flicker; tap for the st
 
 Waste pickups work with the Afvalbeheer and Afvalwijzer integrations and any sensor with a date. The weather card shows on the home view when the weather block in the header is hidden (on phones, for example), or always with **Settings → Home page → Weather card**.
 
+## Electric car
+
+A car on the Stellantis Vehicles integration gets a card on the home view by itself, one per car. While it charges, the card lights up and shows the time left in large type, with the end time, battery and range below it. A charge without a valid end time shows the battery instead of the time. When it isn't charging, the card shows the battery, the range, and in the corner *Ingeplugd*, *Onderweg*, *Thuis* or *Weg*.
+
+A vertical bar on the right shows the battery, from red through yellow to green; the level reveals the gradient, so a low battery only shows red. A small line at the bottom says when the car last reported. Tapping the card opens the Home Assistant dialog of the battery sensor. The device is called after its VIN until you rename it; until then the card is called *Elektrische auto*. Rename the device, or give the card a name in its settings.
+
 ## Groups
 
 **Settings → Groups** combines several lights, switches or plugs into one card, placed in a room or on the home view. Style *tiles* shows a master switch with a chip per member; *list* shows the members as rows.
+
+**Add card → Lampen** puts up to four lights on one card. The lights divide the whole card between them, a quarter each with four; the card's name shows only in the panel it opens. Tapping the card opens the normal card of each light, side by side: tap one to switch it, drag its bar for brightness, hold it for colour and colour temperature.
 
 ## Graphs
 
