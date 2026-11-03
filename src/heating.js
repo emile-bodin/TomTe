@@ -24,7 +24,7 @@ const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const weekday = () => (new Date().getDay() + 6) % 7;   // 0 = Monday
 const on = (p, id) => p.hass.states[id]?.state === "on";
-const blockName = k => ({ hand: t("Met de hand"), vakantie: t("Vakantie"), deur: t("Deur open"), weg: t("Niemand thuis"), opwarmen: t("Opwarmen"), nacht: t("Nacht"), thuisdag: t("Thuisdag"), avond: t("Avond"), avond_desiree: t("Avond, Desiree thuis"), dag: t("Dag") }[k] || k);
+const blockName = k => ({ hand: t("Met de hand"), vakantie: t("Vakantie"), deur: t("Deur open"), weg: t("Niemand thuis"), opwarmen: t("Opwarmen"), nacht: t("Nacht"), thuisdag: t("Thuisdag"), avond: t("Avond"), dag: t("Dag") }[k] || k);
 
 /** when the boiler has to start for the coming warm time: the same sum as the automation Verwarming - opwarmen */
 function preheat(p) {
@@ -65,6 +65,66 @@ async function loadHeat(p) {
   } finally { p._heatBusy = false; }
   p.requestUpdate();
 }
+/* ---------- log: every change of the Nest's setpoint, with the reason read back from the history ---------- */
+const REASON = "sensor.verwarming_reden", SENT = IN + "laatst_gestuurd", LOG_HOURS = 168;
+const SETTING_NAMES = { dag: () => t("Dag"), thuisdag: () => t("Thuisdag"), avond: () => t("Avond"), nacht: () => t("Nacht en weg") };
+const REASON_WINDOW = 17 * 60000, SETTING_WINDOW = 2 * 60000;      // the regelaar retries every 15 minutes; a setting or the main switch acts at once
+async function loadLog(p) {
+  const cur = p.heatLog, changed = Date.parse(p.hass.states[SET]?.last_changed || 0);
+  if (p._heatLogBusy || (cur && Date.now() - cur.at < 60000 && changed <= cur.at)) return;
+  p._heatLogBusy = true;
+  try { p.heatLog = { at: Date.now(), hist: await rawStates(p, [SET, REASON, HAND, SENT, MAIN, ...Object.keys(SETTING_NAMES).map(k => IN + k)], LOG_HOURS) }; }
+  finally { p._heatLogBusy = false; }
+  p.requestUpdate();
+}
+/** without unavailable and unknown, and without repeats: a reload is not a change */
+const logClean = rows => (rows || []).filter(r => !["unavailable", "unknown"].includes(r.s)).filter((r, i, l) => !i || r.s !== l[i - 1].s);
+const logAt = (rows, at) => { let hit = null; for (const r of rows) { if (r.t > at) break; hit = r; } return hit; };
+const stateWord = b => ({ dag: t("dagstand"), thuisdag: t("thuisdag"), avond: t("avondstand"), nacht: t("nachtstand"), opwarmen: t("opwarmen") }[b] || blockName(b));
+/** what changed between two values of sensor.verwarming_reden ("dag + zon"), in words */
+function reasonText(prev, cur) {
+  const part = s => { const [b, w] = s.split(" + "); return [b === "avond_desiree" ? "avond" : b, w || "geen"]; };
+  const [pb, pw] = part(prev), [cb, cw] = part(cur);
+  const on = { koud: t("Koud buiten: 0,5° erbij"), zacht: t("Zacht buiten: 0,5° eraf"), zon: t("De zon schijnt: 0,5° eraf") }, off = { koud: t("Niet meer koud: de 0,5° erbij vervalt"), zacht: t("Niet meer zacht: de 0,5° aftrek vervalt"), zon: t("De zon is weg: de 0,5° aftrek vervalt") };
+  if (pb === cb) return on[cw] || off[pw] || t("De regeling stuurde dit");
+  const main = pb === "weg" ? t("Iemand is thuisgekomen: {s}", { s: stateWord(cb) }) : pb === "deur" ? t("De deur is dicht: {s}", { s: stateWord(cb) }) : pb === "vakantie" ? t("Vakantieschakelaar uit: {s}", { s: stateWord(cb) }) : pb === "hand" ? t("Handbediening afgelopen: {s}", { s: stateWord(cb) })
+    : { hand: t("Met de hand"), vakantie: t("Vakantieschakelaar aan: nachtstand"), deur: t("Buitendeur staat open: nachtstand"), weg: t("Al 30 minuten niemand thuis: nachtstand"), opwarmen: t("Opwarmen voor de warm-tijd"), thuisdag: t("Thuisdag: Desiree is thuis"), avond: t("Avondstand begint"),
+        nacht: pb === "avond" ? t("Avondstop: nachtstand") : t("Nachtstand"), dag: pb === "thuisdag" ? t("Desiree is weg: terug naar de dagstand") : ["nacht", "opwarmen"].includes(pb) ? t("Warm-tijd: dagstand") : t("Dagstand") }[cb] || cur;
+  const note = { koud: t("0,5° erbij door de kou"), zacht: t("0,5° eraf door het zachte weer"), zon: t("0,5° eraf door de zon") }[cw];
+  return note ? `${main} · ${note}` : main;
+}
+/** the rows of the log, newest first. A change counts as the regeling's when it is the value last sent; anything else with the main switch on and no hand timer did not come from here. */
+function logRows(hist) {
+  const set = logClean(hist[SET]).filter(r => num(r.s) != null), reasons = logClean(hist[REASON]), hand = logClean(hist[HAND]), sent = logClean(hist[SENT]), main = logClean(hist[MAIN]);
+  const settings = Object.entries(SETTING_NAMES).flatMap(([k, n]) => logClean(hist[IN + k]).slice(1).map(r => ({ t: r.t, n: n() })));
+  const rows = [];
+  for (let i = 1; i < set.length; i++) {
+    const at = set[i].t, a = num(set[i - 1].s), b = num(set[i].s), base = { at, a, b };
+    if (logAt(main, at)?.s !== "on") { rows.push({ ...base, kind: "schema", why: t("Eigen schema van de Nest") }); continue; }
+    if (logAt(hand, at + 30000)?.s === "active") { const end = hand.find(r => r.t > at && r.s !== "active"); rows.push({ ...base, kind: "hand", why: t("Met de hand gewijzigd"), note: end ? t("stond {n} min", { n: Math.max(1, Math.round((end.t - at) / 60000)) }) : t("loopt nog") }); continue; }
+    const last = num(logAt(sent, at + 5000)?.s);
+    if (last == null || Math.abs(last - b) > 0.25) { rows.push({ ...base, kind: "foreign", why: t("Niet door de regeling"), note: t("Google-app of iets anders") }); continue; }
+    const r = reasons.findLastIndex(x => x.t <= at), setting = settings.filter(s => s.t <= at && at - s.t <= SETTING_WINDOW).sort((x, y) => y.t - x.t)[0], turnedOn = main.some(m => m.s === "on" && m.t <= at && at - m.t <= SETTING_WINDOW);
+    const why = turnedOn ? t("brAIn regelt de Nest vanaf nu") : setting ? t("Instelling {n} gewijzigd", { n: setting.n }) : r > 0 && at - reasons[r].t <= REASON_WINDOW ? reasonText(reasons[r - 1].s, reasons[r].s) : t("De regeling stuurde dit, de reden is niet te herleiden");
+    rows.push({ ...base, kind: "rule", why });
+  }
+  return rows.reverse();
+}
+function logBlock(p) {
+  const log = p.heatLog, rows = log ? logRows(log.hist) : null, now = new Date(), day = 86400000, today = dayKey(now), yest = dayKey(new Date(now - day));
+  const recent = (rows || []).filter(r => [today, yest].includes(dayKey(new Date(r.at)))), list = p.heatLogAll ? rows || [] : recent, more = (rows?.length || 0) > recent.length;
+  const dayName = d => { const k = dayKey(d); return k === today ? t("Vandaag") : k === yest ? t("Gisteren") : d.toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "short" }); };
+  const icons = { rule: "mdi:thermostat-auto", schema: "mdi:calendar-clock", hand: "mdi:hand-back-right-outline", foreign: "mdi:alert-outline" };
+  const out = [];
+  list.forEach((r, i) => {
+    const d = new Date(r.at);
+    if (!i || dayKey(d) !== dayKey(new Date(list[i - 1].at))) out.push(html`<div class="hlogd">${dayName(d)}</div>`);
+    out.push(srow({ icon: icons[r.kind], name: r.why, sub: [d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }), t("was {v}", { v: deg(r.a) }), r.note].filter(Boolean).join(" · "), val: fmt(r.b, 1), unit: "°", err: r.kind === "foreign", dim: r.kind === "schema", tap: () => p.moreInfo(SET) }));
+  });
+  if (!out.length) out.push(html`<div class="hlogn">${rows ? t("Nog geen wijzigingen in deze periode") : t("laden…")}</div>`);
+  if (more) out.push(html`<button class="hlogm" @click=${() => { p.heatLogAll = !p.heatLogAll; p.requestUpdate(); }}>${p.heatLogAll ? t("Minder") : t("Meer")}</button>`);
+  return sblock(hq(p, "log", t("Logboek")), out, t("afgelopen 7 dagen"));
+}
 async function loadDays(p) {
   if (p._heatDaysBusy || (p.heatDays && Date.now() - p.heatDays.at < 30 * 60000)) return;
   p._heatDaysBusy = true;
@@ -92,12 +152,13 @@ const helpTexts = () => ({
   now: { title: t("Nu"), what: t("De actuele cijfers: kamertemperatuur, het doel van de regeling, buiten, stookuren en gas van vandaag."), does: t("Laat in één oogopslag zien of de kamer op het doel zit en of de ketel brandt. Tik op een rij voor de geschiedenis van die sensor.") },
   rules: { title: t("Regeling"), what: t("De hoofdschakelaar, de stand van de Nest en hoe vaak iemand de stand met de hand heeft gewijzigd."), does: t("Met de hoofdschakelaar bepaal je of brAIn de Nest stuurt. Uit is meekijken: het doel wordt berekend, maar er gaat niets naar de Nest. Aanzetten vraagt een tweede tik. Staat hij aan, dan telt een andere stand als met de hand en blijft die staan tot het volgende blok, maximaal 3 uur.") },
   today: { title: t("Vandaag"), what: t("De blokken van vandaag op een balk van 00:00 tot 24:00, met een streepje op het huidige moment."), does: t("Laat zien wanneer welke stand geldt volgens het schema. Uitzonderingen zoals niemand thuis of een open deur staan hier niet op; die zie je bij Nu.") },
+  log: { title: t("Logboek"), what: t("Elke keer dat de stand van de Nest veranderde, met de reden. Vandaag en gisteren staan open, met Meer zie je 7 dagen."), does: t("Hiermee zie je waarom de verwarming iets deed. De reden wordt achteraf afgeleid uit de geschiedenis van Home Assistant. Een rode regel betekent dat de stand veranderde zonder de regeling en zonder handbediening: dan bemoeit de Google-app of iets anders zich ermee.") },
   autos: { title: t("Automations"), what: t("De vier automations die de regeling uitvoeren, met wanneer ze voor het laatst liepen."), does: t("De regelaar stuurt de Nest, handbediening herkent een handmatige wijziging, opwarmen start de ketel op tijd en storing waarschuwt als de Nest niet volgt. Zet je er een uit, dan werkt dat deel van de regeling niet meer.") },
   temp: { title: t("Temperatuur"), what: t("De kamertemperatuur (wit), het doel van de regeling (geel gestippeld) en de stand van de Nest (blauw). De rode strook eronder is wanneer de ketel brandde."), does: t("Hiermee zie je of de kamer het doel haalt en of de ketel op een goed moment stookt. Tijdens het meekijken verschillen doel en stand: de Nest volgt dan nog zijn eigen schema.") },
   out: { title: t("Buiten"), what: t("De buitentemperatuur en de zon, gemeten door het weerstation."), does: t("Het weer stuurt de regeling mee: bij kou start de ketel eerder en gaat de stand 0,5° omhoog, bij zacht weer of zon gaat hij 0,5° omlaag. Hoe zachter het is, hoe vroeger de avondstop.") },
   gas: { title: t("Gas per dag"), what: t("Het gasverbruik per dag over 14 dagen (grijs), met daaronder de graaddagen: hoe koud die dag was (geel)."), does: t("Zo zie je of een hoog verbruik door de kou komt. Is een dag hoog in gas maar laag in graaddagen, dan is er meer gestookt dan nodig. Warm water zit in het gasverbruik.") },
   effect: { title: t("Effect"), what: t("Het gasverbruik per graaddag van het oude Nest-schema tegenover de nieuwe regeling."), does: t("Dit is de eerlijke vergelijking, want een koudere week telt niet tegen de regeling. Er komt pas een conclusie na 14 dagen met de regeling aan. Per dag is 0,4 m³ afgetrokken voor warm water; dat is een schatting.") },
-  temps: { title: t("Temperaturen"), what: t("De temperatuur per blok: dag, thuisdag, avond, avond met Desiree thuis, en nacht en weg."), does: t("Met − en + wijzig je de stand direct in Home Assistant; dat werkt binnen een minuut. Lager is zuiniger: elke graad scheelt ongeveer 6 tot 7% stookgas. De regeling blijft altijd tussen 16° en 21°.") },
+  temps: { title: t("Temperaturen"), what: t("De temperatuur per blok: dag, thuisdag, avond, en nacht en weg."), does: t("Met − en + wijzig je de stand direct in Home Assistant; dat werkt binnen een minuut. Lager is zuiniger: elke graad scheelt ongeveer 6 tot 7% stookgas. De regeling blijft altijd tussen 16° en 21°.") },
   times: { title: t("Tijden"), what: t("Wanneer het warm moet zijn, wanneer de thuisdag en de avond beginnen, en tussen welke tijden de avondstop valt."), does: t("De warm-tijd is het moment waarop de kamer warm moet zijn; de ketel start zelf eerder als dat nodig is. De avondstop kiest de regeling elke avond om 20:00 tussen de vroegste en laatste tijd, afhankelijk van het weer.") },
   weather: { title: t("Weer"), what: t("De grenzen waarbij het weer de stand verandert, en de vakantieschakelaar."), does: t("Onder de koud-grens gaat de stand 0,5° omhoog, boven de zacht-grens of de zon-grens 0,5° omlaag. Daarvoor telt het gemiddelde van het afgelopen uur. De vakantieschakelaar houdt de nachtstand vast tot je hem uitzet.") },
   measured: { title: t("Gemeten waarden van het huis"), what: t("Hoe snel het huis opwarmt met de ketel aan, en hoeveel warmte het verliest per graad verschil met buiten."), does: t("De regeling rekent hiermee uit wanneer de ketel moet starten en wanneer de avondstop valt. Dit zijn metingen, geen voorkeuren. Pas ze alleen aan als de ketel steeds te vroeg of te laat start.") },
@@ -191,7 +252,6 @@ const options = p => [
     numberRow(p, IN + "dag", "mdi:weather-sunny", t("Dag")),
     numberRow(p, IN + "thuisdag", "mdi:home-account", t("Thuisdag"), t("di en wo, als Desiree thuis is")),
     numberRow(p, IN + "avond", "mdi:weather-night", t("Avond")),
-    numberRow(p, IN + "avond_desiree", "mdi:home-account", t("Avond, Desiree thuis")),
     numberRow(p, IN + "nacht", "mdi:power-sleep", t("Nacht en weg"), t("ook bij deur open en vakantie")),
   ], t("wijzigingen werken binnen een minuut")),
   sblock(hq(p, "times", t("Tijden")), [
@@ -221,17 +281,17 @@ function reason(p, block, weer, goal) {
     vakantie: t("De vakantieschakelaar staat aan, dus de nachtstand geldt."), deur: t("Een buitendeur staat al minstens 5 minuten open, dus de ketel stookt niet tot de deur dicht is."),
     weg: t("Er is al minstens 30 minuten niemand thuis. Zodra iemand thuiskomt, gaat de stand terug."), opwarmen: t("De ketel warmt de kamer alvast op voor de warm-tijd."),
     nacht: t("Buiten de dag- en avonduren staat de verwarming laag. Het huis koelt traag af, dus de ketel hoeft dan meestal niet aan."),
-    thuisdag: t("Op dinsdag en woensdag is Desiree thuis, dus overdag is het warmer."), avond: t("De avondstand geldt."), avond_desiree: t("De avondstand geldt, en iets warmer omdat Desiree thuis is."),
+    thuisdag: t("Op dinsdag en woensdag is Desiree thuis, dus overdag is het warmer."), avond: t("De avondstand geldt."),
     dag: t("De dagstand geldt.") }[block] || "";
   const extra = weer === "koud" ? t("Het is koud buiten, dus er staat 0,5° bij.") : weer === "zacht" ? t("Het is zacht buiten, dus er gaat 0,5° af.") : weer === "zon" ? t("De zon schijnt, dus er gaat 0,5° af.") : "";
-  return `${t("Doel {v}.", { v: deg(goal) })} ${text}${extra && ["dag", "opwarmen", "thuisdag", "avond", "avond_desiree"].includes(block) ? ` ${extra}` : ""}`;
+  return `${t("Doel {v}.", { v: deg(goal) })} ${text}${extra && ["dag", "opwarmen", "thuisdag", "avond"].includes(block) ? ` ${extra}` : ""}`;
 }
 function explain(p, block, weer, goal) {
   const pre = preheat(p), stop = p.hass.states["sensor.verwarming_avondstop"]?.state || "–";
   const part = (icon, title, body, open = false) => html`<details class="hlp" ?open=${open}><summary>${ico(icon)}<span>${title}</span></summary><p>${body}</p></details>`;
   return html`<div class="sblk hexpl"><h3>${hq(p, "explain", t("Uitleg"))}</h3>
     ${part("mdi:help-circle-outline", t("Waarom nu deze stand"), reason(p, block, weer, goal), true)}
-    ${part("mdi:calendar-clock", t("Hoe de dag loopt"), t("Op werkdagen is het om {w} warm, in het weekend om {e}. Overdag geldt {d}, vanaf {a} de avondstand van {v} (of {vd} als Desiree thuis is). Na de avondstop geldt {n}. Op dinsdag en woensdag is het overdag {h} als Desiree thuis is.", { w: clock(p, DT + "warm_werkdag", "–"), e: clock(p, DT + "warm_weekend", "–"), d: deg(val(p, IN + "dag")), a: clock(p, DT + "avondstart", "–"), v: deg(val(p, IN + "avond")), vd: deg(val(p, IN + "avond_desiree")), n: deg(val(p, IN + "nacht")), h: deg(val(p, IN + "thuisdag")) }))}
+    ${part("mdi:calendar-clock", t("Hoe de dag loopt"), t("Op werkdagen is het om {w} warm, in het weekend om {e}. Overdag geldt {d}, vanaf {a} de avondstand van {v}. Na de avondstop geldt {n}. Op dinsdag en woensdag is het overdag {h} als Desiree thuis is.", { w: clock(p, DT + "warm_werkdag", "–"), e: clock(p, DT + "warm_weekend", "–"), d: deg(val(p, IN + "dag")), a: clock(p, DT + "avondstart", "–"), v: deg(val(p, IN + "avond")), n: deg(val(p, IN + "nacht")), h: deg(val(p, IN + "thuisdag")) }))}
     ${part("mdi:radiator", t("Slim opwarmen"), pre.start ? t("De ketel start zo laat mogelijk. Nu zou dat om {s} zijn: de kamer is {r}, moet {g} worden, en warmt bij {o} buiten ongeveer {v}° per uur op.", { s: pre.start, r: deg(pre.room), g: deg(pre.goal), o: deg(pre.out), v: fmt(pre.rate, 2) }) : t("De ketel start zo laat mogelijk, maximaal 3 uur vooraf. De kamer is nu {r} en moet {g} zijn, dus opwarmen is nu niet nodig.", { r: deg(pre.room), g: deg(pre.goal) }))}
     ${part("mdi:clock-end", t("Avondstop"), t("De ketel stopt zo vroeg dat de kamer tot 23:00 maximaal 0,5° zakt. Hoe zachter het buiten is, hoe vroeger dat kan. De tijd wordt elke avond om 20:00 vastgezet. Vanavond: {s}.", { s: stop }))}
     ${part("mdi:format-list-numbered", t("Wat voorgaat"), t("Met de hand wint altijd. Daarna vakantie, een open deur, niemand thuis, en dan pas het dagschema. Staat de Nest zelf op uit, dan blijft de regeling eraf."))}
@@ -245,6 +305,7 @@ export function heating(p) {
   if (!st[GOAL]) return { sub: t("Niet gevonden"), body: html`<div class="hempty">${t("De verwarmingsregeling is niet gevonden in Home Assistant.")}</div>` };
   loadHeat(p); loadDays(p);
   const tab = p.heatTab || "all", hours = p.heatHours || 24, show = k => tab === "all" || tab === k;
+  if (show("regeling")) loadLog(p);
   const running = on(p, MAIN), room = val(p, ROOM), boiler = st[BOILER]?.state === "on", hist = p.heatHist;
   const armed = p._heatArm && Date.now() - p._heatArm < 6000;
   const toggleMain = () => {
@@ -288,6 +349,7 @@ export function heating(p) {
           <div class="htl">${blocks.map(([k, a, b]) => html`<i class=${k} style="flex-grow:${b - a}" title="${blockName(k)} · ${hhmm(a)}–${hhmm(b)}"></i>`)}<u style="left:${(nowM / 14.4).toFixed(2)}%"></u></div>
           <ul class="hsch">${blocks.map(([k, a, b]) => html`<li class=${classMap({ cur: nowM >= a && nowM < b })}><i class=${k}></i><b>${hhmm(a)}</b> ${blockName(k)}</li>`)}</ul>
         </div>
+        ${logBlock(p)}
         ${sblock(hq(p, "autos", t("Automations")), autos.map(s => { const k = s.entity_id.split("_").pop(); return srow({ icon: "mdi:robot-outline", svg: "robot", name: autoName[k], sub: `${autoSub[k]} · ${s.attributes.last_triggered ? t("laatst {t}", { t: relTime(s.attributes.last_triggered) }) : t("nog nooit gestart")}`, toggle: unavailable(s) ? null : () => p.call("automation", "toggle", { entity_id: s.entity_id }), pill: unavailable(s) ? t("Fout") : null, on: s.state === "on", err: unavailable(s), tap: () => p.moreInfo(s.entity_id) }); }), `${autos.length}`)}` : nothing}
       ${show("grafieken") ? charts(p) : nothing}
       ${show("opties") ? options(p) : nothing}
@@ -342,6 +404,12 @@ export const heatingStyles = `
   .hsch li.cur{color:#fff;font-weight:600}
   .hsch li i{width:8px;height:8px;border-radius:2px;flex:none}
   .hsch li b{font-weight:600;font-variant-numeric:tabular-nums}
+  .hlogd{padding:10px 20px 2px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--fg-3)}
+  .hlogd:first-of-type{padding-top:2px}
+  .hlogn{padding:10px 20px 12px;font-size:13px;color:var(--fg-3)}
+  .hlogm{display:block;width:100%;padding:10px 20px;border:0;border-top:1px solid rgba(255,255,255,.08);background:none;color:var(--fg-2);font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+  .hlogm:hover{background:rgba(255,255,255,.05)}
+  .hblks .srow.err:has(> .val) .nm,.hblks .srow.err:has(> .val) .val{color:rgb(242,122,92)}
   .hlp{border-top:1px solid rgba(255,255,255,.08)}
   .hlp summary{display:grid;grid-template-columns:26px 1fr;gap:14px;align-items:center;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;list-style:none}
   .hlp summary::-webkit-details-marker{display:none}
@@ -350,6 +418,7 @@ export const heatingStyles = `
   .hlp p{margin:0;padding:0 20px 12px 60px;font-size:13px;line-height:1.5;color:var(--fg-2)}
   @media (max-width:900px){
     .hcbody{padding:4px 14px 10px} .hnote{padding:8px 14px 6px} .hmore summary{padding:10px 14px 6px} .hmore .hnote{padding:0 14px 10px}
+    .hlogd,.hlogn,.hlogm{padding-left:14px;padding-right:14px}
     .hday .htl{margin:2px 14px 0} .hsch{padding:0 14px} .hlp summary{padding:10px 14px} .hlp p{padding:0 14px 12px 54px}
   }
 `;

@@ -46,6 +46,7 @@ Only there when Home Assistant has the **Music Assistant** integration. Pills at
 Only there when the Home Assistant rules behind `sensor.verwarming_doel` exist, a set of rules that steer a thermostat. Laid out like the Sensors page, with filter pills and blocks of rows:
 
 - what the rules do now and why, today's schedule, the main switch and the automations;
+- a log of every setpoint change with its reason, read back from Home Assistant's history (up to 7 days). A red row means the setpoint changed without the rules and without a manual change;
 - graphs of the room, target, Nest setpoint and boiler, of the outside temperature and sun, of gas per day, and of gas per degree day against the old schedule;
 - every temperature, time and weather limit, to change in place;
 - a plain explanation with the current values. Every block also has a small question mark that opens a popup about what it shows and does.
