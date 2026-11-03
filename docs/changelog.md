@@ -4,6 +4,14 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.8.0 · 2026-11-03
+
+- **Fix: a washer or dryer on LocalThings stays Done after its cycle.** These machines report idle straight after a cycle, exactly as after a stop, so the card went to Stopped and then Off and the message on the home page disappeared. A helper now remembers it (`input_boolean.wasmachine_klaar`, `input_boolean.droger_klaar`; an automation keeps it): the card, the home page and the idle screen show Done until you tap the new Taken out button or a new cycle starts.
+- **New: a log on the Heating page.** It was hard to see why the heating did something, because the graphs show that the setpoint changed but not why. The Rules tab now lists every setpoint change with its reason in plain words, read back from Home Assistant's history: today and yesterday, with More for 7 days. A red row means the setpoint changed without the rules and without anyone changing it by hand, for example when the Google app interferes.
+- **Fix: the Heating page no longer mentions a separate evening setting for Desiree.** The rules dropped it, but the page still showed "–" for it in the explanation.
+- **New: a lights card.** Add card → Lampen puts up to four lights on one card. They divide the whole card between them, a quarter each with four, each with its state and a brightness bar. Tapping the card opens the normal card of every light side by side, plus all on and all off: tap one to switch it, drag its bar for brightness, hold it for colour and colour temperature.
+- **New: a card for an electric car on Stellantis Vehicles.** There was no way to see at a glance how long the car still has to charge. While it charges, the card shows the time left in large type, with the end time, battery and range below it. Otherwise it shows the battery, and whether the car is plugged in, driving, home or away. A small line at the bottom says when the car last reported, because its values can be minutes old, and a vertical bar with a red to green gradient shows the battery. It appears on the home page by itself.
+
 ## 1.7.2 · 2026-11-02
 
 - **Fix: the settings page responds quickly on a tablet.** Every change built all sixteen tabs again, with a sorted list of all entities for each dropdown, and so did every sensor changing anywhere in the house. Now only the open tab is built, the sorted lists are reused, typing no longer recalculates the rooms, and sensor changes redraw the page at most every 5 seconds. The doorbell popup still opens at once
