@@ -55,6 +55,8 @@ Turning on the main switch takes a second tap, because the thermostat is steered
 
 ## Automation
 
+The status summary explains what happens now, with an approximate countdown when the absence timer is active. FP300 readings include temperature, humidity, battery, illuminance and the last report; tap a reading for Home Assistant's history dialog. Monitor buttons and light sliders act directly, while daylight thresholds can be edited in place. Manual light changes pause automatic dimming; **Resume automatic lighting** clears that pause for the next automatic update. The 70% ceiling only applies to automatic lighting, so manual sliders allow the full range.
+
 Available under **More → Automation** when the office work-session helper exists. Start a session using the same action as the tag, or finish with **Finish work**. The page shows presence, measured light, the scheduled switch-off time, working from home, and the manual lighting pause. Tap a monitor or light row for its Home Assistant controls, or a daylight threshold to adjust it. Missing entities show as unavailable; the page does not create or change automation rules. Automatic lighting is limited to 70%; a session has no fixed start or finish time.
 ## Your own links
 

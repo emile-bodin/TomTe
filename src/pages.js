@@ -340,4 +340,17 @@ export const pageStyles = `
   .office .ptools .ppills{margin-top:0}
   .office button:disabled{opacity:.45;cursor:default}
   .office button.tog{border:0;padding:0}
+  .office-summary{display:flex;align-items:center;justify-content:space-between;gap:1.5em;padding:1.4em;border:1px solid var(--line);border-radius:var(--r);background:rgba(255,255,255,.08);margin-top:1.5em}
+  .office-summary strong{font-size:1.25em}.office-summary p{color:var(--fg-2);margin:.5em 0 0;line-height:1.5}
+  .office-countdown{display:grid;gap:.5em;min-width:10em}.office-countdown progress{width:100%;accent-color:var(--fg)}
+  .office-inset{padding:0 1em 1em}.office-note{padding:0 1.4em;color:var(--fg-3);font-size:.8em;line-height:1.5}
+  .office-device{border-top:1px solid var(--line);padding:1em 1.4em}.office-device>div{display:flex;align-items:center;justify-content:space-between;gap:1em}
+  .office-device button{color:inherit;font:inherit;cursor:pointer}.office-device .pill{padding:.5em 1em}
+  .office-name{background:none;border:0;padding:0;text-align:left;font-weight:600!important}
+  .office-device label{display:flex;align-items:center;gap:1em;margin-top:1em;font-size:.8em}.office-device input{min-width:0;flex:1;accent-color:white}.office-device output{min-width:3em;text-align:right}
+  .office-readings{display:grid;grid-template-columns:1fr 1fr;padding:.5em;gap:.5em}
+  .office-reading{display:grid;gap:.4em;text-align:left;background:rgba(255,255,255,.05);color:inherit;border:1px solid var(--line);border-radius:var(--r);padding:1em;font:inherit;cursor:pointer}
+  .office-reading strong{font-size:1.6em}.office-reading small{font-size:.7em;color:var(--fg-3)}.office-reading strong small{margin-left:.3em}.office-reading span{font-size:.8em}
+  .office-threshold{display:flex;align-items:center;gap:.6em;padding:1em 1.4em;border-top:1px solid var(--line);font-size:.85em}.office-threshold span{flex:1;min-width:0}.office-threshold input{width:4.5em;max-width:30%;padding:.6em;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:.5em;color:inherit;font:inherit}
+  @media(max-width:600px){.office-summary{flex-direction:column;align-items:stretch}.office-device label{gap:.5em}}
 `;
