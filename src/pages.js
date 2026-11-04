@@ -12,8 +12,10 @@ import { pendingUpdates, installUpdate } from "./features.js";
 import { pickNet, etaText } from "./extras3.js";
 import { maPlayers, playerName, queueList, movePills, playerBar, library, speakerList, pickSpeaker } from "./music.js";
 import { heating } from "./heating.js";
+import { office } from "./office.js";
 
 export const PAGES = {
+  automation: { label: "Automation", sub: t("werksessie, aanwezigheid en licht"), icon: "mdi:desk", ha: null, when: hass => !!hass.states["input_boolean.kantoor_werksessie_actief"] },
   automatiseringen: { label: t("Automatiseringen"), sub: t("aan, uit en fouten"), icon: "mdi:robot-outline", ha: "/config/automation/dashboard" },
   sensoren: { label: t("Sensoren"), sub: t("batterijen, updates, per ruimte"), icon: "mdi:radar", ha: "/config/entities" },
   energie: { label: t("Energie"), sub: t("verbruik en opwek"), icon: "mdi:lightning-bolt-outline", ha: "/energy" },
@@ -29,8 +31,8 @@ const sec = (title, cards, meta = "") => cards.length ? html`<section class="sec
 
 export function renderPage(p, key) {
   const def = PAGES[key];
-  const page = { automatiseringen: automations, sensoren: sensors, energie: energy, cameras: cameras, systeem: system, muziek: music, verwarming: heating }[key](p);
-  return html`<section class="page">
+  const page = { automatiseringen: automations, sensoren: sensors, energie: energy, cameras: cameras, systeem: system, muziek: music, verwarming: heating, automation: office }[key](p);
+  return html`<section class=${classMap({ page: true, office: key === "automation" })}>
     <header class="phead">
       <div><div class="peb">${t("Meer")}<i class="dt"></i>${page.sub}</div><h1>${t(def.label)}</h1>${page.head || nothing}</div>
       <div class="ptools">${page.tools || nothing}${def.ha ? html`<a class="pill hab" @click=${() => p.goPath(def.ha)}><ha-icon icon="mdi:open-in-new"></ha-icon><span>${t("Openen in Home Assistant")}</span></a>` : nothing}</div>
@@ -331,4 +333,11 @@ export const pageStyles = `
     .cgrid .card.kpi .s{font-size:22px}
     .cgrid .card.cam{grid-column:1/-1;height:180px}
   }
+  .office .srow{grid-template-columns:26px minmax(0,1fr) max-content}
+  .office .srow .nm,.office .srow .nm small{white-space:normal;overflow-wrap:anywhere}
+  .office .srow .st:empty{display:none}
+  .office .kpi .n{padding-right:0;white-space:normal}
+  .office .ptools .ppills{margin-top:0}
+  .office button:disabled{opacity:.45;cursor:default}
+  .office button.tog{border:0;padding:0}
 `;

@@ -53,6 +53,9 @@ Only there when the Home Assistant rules behind `sensor.verwarming_doel` exist, 
 
 Turning on the main switch takes a second tap, because the thermostat is steered from that moment.
 
+## Automation
+
+Available under **More → Automation** when the office work-session helper exists. Start a session using the same action as the tag, or finish with **Finish work**. The page shows presence, measured light, the scheduled switch-off time, working from home, and the manual lighting pause. Tap a monitor or light row for its Home Assistant controls, or a daylight threshold to adjust it. Missing entities show as unavailable; the page does not create or change automation rules. Automatic lighting is limited to 70%; a session has no fixed start or finish time.
 ## Your own links
 
 **Settings → More menu** adds your own entries (label, icon, path) next to the built-in pages, for example to another dashboard.
