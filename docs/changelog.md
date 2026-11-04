@@ -4,6 +4,12 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.9.1 · 2026-11-04
+
+- **New: direct controls and sensor readings on Automation.** The work-session page now explains its current state, shows the remaining absence delay and FP300 temperature, humidity, battery and reporting time, and offers light sliders, monitor controls, daylight inputs and an explicit return to automatic lighting.
+
+- **New: Automation page for the office work session.** Start or finish work, check presence and lighting, change daylight thresholds and see the manual lighting pause together under More → Automation, using the existing Home Assistant rules.
+
 ## 1.9.0 · 2026-11-03
 
 - **New: the idle screen shows what is active, and you can tap it.** It only showed the clock, the weather and a line of totals, and every tap just woke the panel. Tiles now show washers, dryers and dishwashers that are busy or done, a car that is charging, what is playing, and per room the lights that are on. Tapping a tile wakes the panel on that room; a car and "+N more" go to the home page. Tapping beside a tile wakes the panel where it was. Moving a mouse no longer wakes the idle screen, because a mouse could otherwise never reach a tile: click, touch, a key or scrolling does.

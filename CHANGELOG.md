@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.9.1 · 2026-11-04
+
 - **New: direct controls and sensor readings on Automation.** The work-session page now explains its current state, shows the remaining absence delay and FP300 temperature, humidity, battery and reporting time, and offers light sliders, monitor controls, daylight inputs and an explicit return to automatic lighting.
 
 - **New: Automation page for the office work session.** Start or finish work, check presence and lighting, change daylight thresholds and see the manual lighting pause together under More → Automation, using the existing Home Assistant rules.
