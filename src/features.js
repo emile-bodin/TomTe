@@ -58,11 +58,16 @@ export function pendingUpdates(hass) {
   return Object.values(hass.states)
     .filter(s => domain(s.entity_id) === "update" && s.state === "on" && !(s.attributes.skipped_version && s.attributes.skipped_version === s.attributes.latest_version))
     .map(s => ({ s, id: s.entity_id, title: s.attributes.title || (s.attributes.friendly_name || s.entity_id).replace(/ update$/i, ""), kind: s.attributes.device_class === "firmware" ? t("Firmware") : t("Software"),
-      from: s.attributes.installed_version, to: s.attributes.latest_version, busy: !!s.attributes.in_progress, canInstall: (s.attributes.supported_features & 1) === 1, summary: s.attributes.release_summary }))
+      from: s.attributes.installed_version, to: s.attributes.latest_version, busy: !!s.attributes.in_progress, pct: typeof s.attributes.update_percentage === "number" ? s.attributes.update_percentage : typeof s.attributes.in_progress === "number" ? s.attributes.in_progress : null, canInstall: (s.attributes.supported_features & 1) === 1, summary: s.attributes.release_summary }))
     .sort((a, b) => a.title.localeCompare(b.title, "nl"));
 }
+/** the row on the System and Sensors pages: while an update installs it says so and a tap opens its details instead of offering it again */
+export const updateRow = (p, u) => ({ icon: u.kind === t("Firmware") ? "mdi:chip" : "mdi:update", svg: "update", name: u.title,
+  sub: u.busy ? `${t("Bezig…")} ${u.from || "?"} → ${u.to || "?"}` : `${u.from || "?"} → ${u.to || "?"}${u.canInstall ? " · " + t("tik = installeren") : ""}`,
+  tr: u.busy ? html`<div class=${u.pct == null ? "prog run" : "prog"}><i style="--v:${Math.max(0, Math.min(100, u.pct ?? 0))}%"></i></div>` : nothing,   // without a percentage the bar just runs
+  pill: u.busy ? (u.pct != null ? `${Math.round(u.pct)}%` : t("Bezig")) : t("Update"), on: !u.busy, dim: u.busy, tap: () => installUpdate(p, u) });
 export function installUpdate(p, u) {
-  if (!u.canInstall) return p.moreInfo(u.id);
+  if (!u.canInstall || u.busy) return p.moreInfo(u.id);
   p.openPopup({ type: "confirm", title: t("Update installeren"), big: u.title, sub: `${u.from || "?"} → ${u.to || "?"}${u.summary ? " · " + u.summary.replace(/\s+/g, " ").slice(0, 160) : ""}`, okLabel: t("Installeren"), ok: () => p.call("update", "install", { entity_id: u.id }) });
 }
 
@@ -114,6 +119,10 @@ export const featureStyles = `
   .popup .fc div img.ico{width:24px;height:24px;margin:6px auto;display:block}
   .popup .fc div.today{background:rgba(255,255,255,.22)}
   .popup .confirm-text{white-space:pre-line}
+  .srow .prog{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+  .srow .prog i{position:absolute;inset:0 auto 0 0;width:var(--v);border-radius:3px;background:#fff;transition:width .6s ease}
+  .srow .prog.run i{width:35%;animation:progRun 1.4s ease-in-out infinite}
+  @keyframes progRun{from{left:-35%}to{left:100%}}
   .popup.wiz .wfoot{margin-top:22px}
   .popup.wiz .dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
   .popup.wiz .dots i{width:8px;height:8px;border-radius:50%;background:#fff;opacity:.3}

@@ -8,7 +8,7 @@ import { domain, num, isOn, unavailable, isDown, relTime } from "./util.js";
 import { pressDir, label, cardCfg, camStream, ico, energyOf } from "./cards.js";
 import { spark } from "./extras3.js";
 import { name, deviceName } from "./model.js";
-import { pendingUpdates, installUpdate } from "./features.js";
+import { pendingUpdates, updateRow } from "./features.js";
 import { pickNet, etaText } from "./extras3.js";
 import { maPlayers, playerName, queueList, movePills, playerBar, library, speakerList, pickSpeaker } from "./music.js";
 import { heating } from "./heating.js";
@@ -139,7 +139,7 @@ function system(p) {
   ].filter(Boolean);
   const hostRows = [
     host ? srow({ icon: "mdi:server", svg: "server", name: host.hostname || t("Host"), sub: [host.operating_system, host.kernel].filter(Boolean).join(" · "), pill: "OK", tap: () => p.goPath("/config/hardware") }) : null,
-    ...updates.map(u => srow({ icon: u.kind === t("Firmware") ? "mdi:chip" : "mdi:update", svg: "update", name: u.title, sub: `${u.busy ? t("Bezig…") : `${u.from || "?"} → ${u.to || "?"}`}${u.canInstall ? " · " + t("tik = installeren") : ""}`, pill: t("Update"), on: true, tap: () => installUpdate(p, u) })),
+    ...updates.map(u => srow(updateRow(p, u))),
   ].filter(Boolean);
   return { sub: t("{n} sensoren · {u} updates", { n: new Set([...cpu, ...mem, ...disk, ...net].map(s => s.entity_id)).size, u: updates.length }),
     body: html`
@@ -176,7 +176,7 @@ function sensors(p) {
   const block = (title, rows, meta = "") => rows.length ? html`<div class="sblk"><h3>${title}${meta ? html`<b>${meta}</b>` : nothing}</h3>${rows}</div>` : nothing;
   const total = p.rooms.reduce((n, r) => n + roomRows(r).length, 0), lowB = batteries.filter(b => b.v <= low);
   const attention = [
-    ...(filter === "all" || filter === "update" ? updates.map(u => row({ icon: u.kind === t("Firmware") ? "mdi:chip" : "mdi:update", svg: "update", name: u.title, sub: `${u.busy ? t("Bezig…") : `${u.from || "?"} → ${u.to || "?"}`}${u.canInstall ? " · " + t("tik = installeren") : ""}`, pill: t("Update"), on: true, tap: () => installUpdate(p, u) })) : []),
+    ...(filter === "all" || filter === "update" ? updates.map(u => row(updateRow(p, u))) : []),
     ...(filter === "all" || filter === "battery" ? (filter === "battery" ? batteries : lowB).map(({ e, r, v }) => R.batt(e, r, v, true)) : []),
     ...(filter === "offline" || (filter === "all" && (offline.length < 2 || p.sensOffOpen)) ? offline.map(({ e, r }) => row({ icon: "mdi:lan-disconnect", svg: "network_off", name: name(p.hass, e), sub: `${r.name} · ${t("sinds {t}", { t: relTime(e.state?.last_changed) })}`, pill: t("Offline"), dim: true, tap: more(e.id), cls: filter === "all" && offline.length > 1 ? "nest" : "" })) : []),
   ];
