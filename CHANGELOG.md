@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.9.2 · 2026-11-11
+
 - **Fix: the lights card uses the colours of a normal light card.** A light that was on showed as a near-white block with dark text, unlike every other light. Each section now looks like a light card: the plain card colour when off, the lighter "on" colour with white text when on, the light's own tint when it shines in colour, and a white brightness bar.
 
 ## 1.9.1 · 2026-11-04
