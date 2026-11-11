@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+## 1.9.3 · 2026-11-11
+
 - **Fix: an update that is installing no longer offers itself again.** On the System and Sensors pages an update that was already installing still showed an "Update" button and a tap asked to install it once more. It now shows "Busy", greyed out, with the versions and a progress bar (the percentage when the device reports one, otherwise a running bar), and a tap opens its details.
 
 ## 1.9.2 · 2026-11-11
