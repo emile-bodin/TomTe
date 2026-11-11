@@ -471,19 +471,19 @@ export const styles = css`
   .card.group .glist div b{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--fg-3);flex:none}
   .card.group .glist div.on b{color:#fff}
   /* lamp group: the title takes the icon's row, the sections fill the rest; each section drops what its height can't hold */
+  .card.lamps,.card.lamps.on{background:none}
   .card.lamps .s{grid-area:auto;position:absolute;inset:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:1px;white-space:normal;overflow:hidden}
   .card.lamps .s.l1{grid-template-columns:minmax(0,1fr)}
   .card.lamps .s.l3 .lsec:first-child{grid-column:1 / 3}
-  .card.lamps .lsec{container-type:size;position:relative;overflow:hidden;min-width:0;min-height:0;box-sizing:border-box;padding:0 10px;display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-areas:"li st" "nm nm";align-content:space-evenly;align-items:center;background:rgba(255,255,255,.1);color:#fff}
-  .card.lamps .lsec.on{background:rgba(255,255,255,.9);color:#1d1d1f}
+  .card.lamps .lsec{container-type:size;position:relative;overflow:hidden;min-width:0;min-height:0;box-sizing:border-box;padding:0 10px;display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-areas:"li st" "nm nm";align-content:space-evenly;align-items:center;background:var(--card);color:#fff}
+  .card.lamps .lsec.on{background:var(--card-on)}
   .card.lamps .lsec.un{background:none;color:var(--fg-3)}
   .card.lamps .lsec .li{grid-area:li;display:flex;line-height:0}
   .card.lamps .lsec .li img.ico{width:20px;height:20px}
   .card.lamps .lsec .li ha-icon{--mdc-icon-size:20px}
-  .card.lamps .lsec.on .li img.ico{filter:invert(1)}
   .card.lamps .lsec em{grid-area:st;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;opacity:.75}
   .card.lamps .lsec b{grid-area:nm;color:inherit;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .card.lamps .lsec i{position:absolute;left:0;bottom:0;height:3px;width:var(--v,0%);background:var(--lc,rgba(0,0,0,.5))}
+  .card.lamps .lsec i{position:absolute;left:0;bottom:0;height:3px;width:var(--v,0%);background:#fff}
   @container (max-width:120px){ .card.lamps .lsec b{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.15} .card.lamps .lsec.un .li{display:none} .card.lamps .lsec.un em{grid-column:1 / -1} }
   @container (max-height:54px){ .card.lamps .lsec .li{display:none} }
   @container (max-height:36px){ .card.lamps .lsec em{display:none} .card.lamps .lsec b{white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:11px;line-height:1.15} }

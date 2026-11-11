@@ -4,6 +4,8 @@ Tomte started as a fork of [HaCasa Nova](https://github.com/damianeickhoff/HaCas
 
 ## Unreleased
 
+- **Fix: the lights card uses the colours of a normal light card.** A light that was on showed as a near-white block with dark text, unlike every other light. Each section now looks like a light card: the plain card colour when off, the lighter "on" colour with white text when on, the light's own tint when it shines in colour, and a white brightness bar.
+
 ## 1.9.1 · 2026-11-04
 
 - **New: direct controls and sensor readings on Automation.** The work-session page now explains its current state, shows the remaining absence delay and FP300 temperature, humidity, battery and reporting time, and offers light sliders, monitor controls, daylight inputs and an explicit return to automatic lighting.

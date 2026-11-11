@@ -802,8 +802,8 @@ function lampsCard(p, g, id, cfg, popup) {
 }
 function lampSection(p, x) {
   const un = unavailable(x.s), dim = lightCaps(x.s).dim, pct = x.on ? Math.round((x.s.attributes.brightness || 255) / 2.55) : 0;
-  const rgb = x.on && !cardCfg(p, x.id).noColor ? lightRgb(x.s) : null;
-  return html`<div class=${classMap({ lsec: true, on: x.on, un })} style="--v:${dim ? pct : 0}%${rgb ? `;--lc:rgb(${rgb.join(",")})` : ""}">
+  const tint = x.on && !cardCfg(p, x.id).noColor ? lightTint(x.s) : null;
+  return html`<div class=${classMap({ lsec: true, on: x.on, un })} style="--v:${dim ? pct : 0}%${tint ? `;background:${tint}` : ""}">
     <span class="li">${icoFor(p, x.id, "mdi:lightbulb-outline", lightIcon(x.s))}</span>
     <em>${un ? t("Onbereikbaar") : x.on ? (dim ? `${pct}%` : t("Aan")) : t("Uit")}</em>
     <b>${x.name}</b><i></i>
